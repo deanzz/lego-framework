@@ -2,11 +2,14 @@ name := "lego-framework"
 
 version := "2.0.4"
 
-scalaVersion := "2.10.6"
+scalaVersion := "2.11.8"
 
 lazy val legoCommon = project.in(file("modules/framework-common"))
 
 lazy val legoCore = project.in(file("modules/framework-core")).aggregate(legoCommon)
+  .dependsOn(legoCommon)
+
+lazy val legoGraph = project.in(file("modules/framework-graph")).aggregate(legoCommon)
   .dependsOn(legoCommon)
 
 lazy val root = project.in(file("."))
