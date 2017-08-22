@@ -8,6 +8,6 @@ import cn.dean.lego.graph.models.GraphNode
   */
 trait GraphPhysicalParser[I, O] {
 
-  def parse(root: GraphNode[I]): RunnableGraph[O]
+  def parse(nodes: Seq[GraphNode[I]]): O
 
 }

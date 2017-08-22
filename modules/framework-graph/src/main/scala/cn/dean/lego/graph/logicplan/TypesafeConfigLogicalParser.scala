@@ -3,7 +3,7 @@ package cn.dean.lego.graph.logicplan
 import com.typesafe.config.{Config, ConfigFactory}
 import cn.dean.lego.common._
 import cn.dean.lego.common.config.ConfigLoader
-import cn.dean.lego.graph.models.{GraphNode, Index}
+import cn.dean.lego.graph.models.GraphNode
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -58,21 +58,20 @@ object TypesafeConfigLogicalParser extends GraphLogicalParser[Config, (Config, O
       allMap
     }
 
-    val rootSeq = indexMap.filter {
-      case (idx, _) =>
-        idx.split('.').length == 1
-    }.toSeq.sortBy(_._1.toInt)
+    val nodes = ListBuffer.empty[GraphNode[(Config, Option[Config])]]
 
-    val nodes = rootSeq.map {
+    val rootSeq = indexMap.filter(_._1.count(_ == '.') == 0).toSeq.sortBy(_._1.toInt)
+
+    rootSeq.map {
       case (rootIdx, rootConf) =>
-        val idx = Index(rootIdx, 1)
-        val root = GraphNode(idx, rootConf, Some(ListBuffer.empty[GraphNode[(Config, Option[Config])]]))
+        val root = GraphNode(rootIdx, rootConf, ListBuffer.empty[GraphNode[(Config, Option[Config])]], ListBuffer.empty[GraphNode[(Config, Option[Config])]])
+        nodes += root
         val childrenMap = indexMap.filter(_._1.startsWith(rootIdx + '.'))
-        generateGraphNodes(childrenMap, root)
+        generateGraphNodes(childrenMap, root, nodes)
         root
     }
 
-    nodes
+    nodes.sortWith(indexOrder)
   }
 
   private def getFromUpper(conf: Config, parentIdx: Option[String] = None): mutable.Map[String, (Config, Option[Config])] = {
@@ -99,65 +98,56 @@ object TypesafeConfigLogicalParser extends GraphLogicalParser[Config, (Config, O
     mutable.Map(indexSeq: _*)
   }
 
-  /*
-  1
-  1.1
-  1.2
-  1.1.1
-  1.1.2
-  1.2.1
-  1.2.2
-   */
+  private def isRootLevelNode[T](node: GraphNode[T]) = {
+    node.index.count(_ == '.') == 0
+  }
 
-  private def generateGraphNodes(map: mutable.Map[String, (Config, Option[Config])], parentNode: GraphNode[(Config, Option[Config])]): Unit = {
-    if (map.nonEmpty) {
-      val currLevelNodes = map.filter {
-        case ((key, _)) =>
-          val keyArr = key.split('.')
-          keyArr.slice(0, keyArr.length - 1).mkString(".") == parentNode.index.num
-      }.map{
-        case ((key, v)) =>
-          val keyArr = key.split('.').map(_.toInt)
-          (keyArr, key, v)
-      }.toSeq.sortWith{
-        case ((keyArr1, _, _),(keyArr2, _, _)) =>
-          //println("generateGraphNodes sort")
-          arrayOrder(keyArr1, keyArr2)
+  private def generateGraphNodes[T](childrenMap: mutable.Map[String, (Config, Option[Config])], parentNode: GraphNode[(Config, Option[Config])], nodes: ListBuffer[GraphNode[(Config, Option[Config])]]): Unit = {
+    //if it is root level nodes
+    if(isRootLevelNode(parentNode)){
+      val haveReadRoots = nodes.filter(n => isRootLevelNode(n) && n.index != parentNode.index).map(_.index.toInt)
+      if(haveReadRoots.nonEmpty){
+        val haveReadMaxIdx = haveReadRoots.max
+        if(nodes.count(_.index.startsWith(haveReadMaxIdx.toString)) == 1){
+          val lastNode = nodes.filter(_.index == haveReadMaxIdx.toString).head
+          lastNode.outputs += parentNode
+          parentNode.inputs += lastNode
+        } else {
+          val inputs = nodes.filter(n => n.outputs.isEmpty && n.index.count(_ == '.') > 0 && n.index.startsWith(s"$haveReadMaxIdx."))
+          inputs.foreach(n => n.outputs += parentNode)
+          parentNode.inputs ++= inputs
+        }
       }
+    }
 
-      currLevelNodes.foreach {
-        case (idxArr, idx,  c) =>
-          val idxObj = Index(idx, idxArr.length)
-          val newNode = GraphNode(idxObj, c, Some(ListBuffer.empty[GraphNode[(Config, Option[Config])]]))
-          parentNode.children.get += newNode
-          map -= idx
-          generateGraphNodes(map, newNode)
+    if (childrenMap.nonEmpty) {
+      generateHelper(childrenMap, parentNode, nodes)
+    }
+
+    def generateHelper(childrenMap: mutable.Map[String, (Config, Option[Config])],
+                       parentNode: GraphNode[(Config, Option[Config])],
+                       nodes: ListBuffer[GraphNode[(Config, Option[Config])]]): Unit = {
+      if (childrenMap.nonEmpty) {
+        val childrenNodes = childrenMap.filter {
+          case ((key, _)) =>
+            val keyArr = key.split('.')
+            keyArr.slice(0, keyArr.length - 1).mkString(".") == parentNode.index
+        }
+
+        childrenNodes.foreach {
+          case (idx, c) =>
+            val newNode = GraphNode(idx, c, ListBuffer.empty[GraphNode[(Config, Option[Config])]], ListBuffer.empty[GraphNode[(Config, Option[Config])]])
+            parentNode.outputs += newNode
+            newNode.inputs += parentNode
+            nodes += newNode
+            childrenMap -= idx
+            generateHelper(childrenMap, newNode, nodes)
+        }
       }
     }
   }
 
-  /*private def generateGraphNodes(map: mutable.Map[String, (Config, Option[Config])], parentNode: GraphNode[(Config, Option[Config])]): Unit = {
-    if (map.nonEmpty) {
-      val currLevelNodes = map.filter {
-        case ((key, _)) =>
-          val keyArr = key.split('.')
-          keyArr.slice(0, keyArr.length - 1).mkString(".") == parentNode.index.num
-      }
-
-      currLevelNodes.foreach {
-        case (idx,  c) =>
-          val idxArr = idx.split('.')
-          val idxObj = Index(idx, idxArr.length)
-          val newNode = GraphNode(idxObj, c, Some(ListBuffer.empty[GraphNode[(Config, Option[Config])]]))
-          parentNode.children.get += newNode
-          map -= idx
-          generateGraphNodes(map, newNode)
-      }
-    }
-  }*/
-
-
-  private implicit def arrayOrder(arr1: Array[Int], arr2: Array[Int]): Boolean = {
+  private def arrayOrder(arr1: Array[Int], arr2: Array[Int]): Boolean = {
     //if (arr1.length != arr2.length) throw new UnsupportedOperationException("Arrays with diff length Not supported")
     import scala.util.control.Breaks.{break, breakable}
     val len = math.min(arr1.length, arr2.length)
@@ -172,6 +162,12 @@ object TypesafeConfigLogicalParser extends GraphLogicalParser[Config, (Config, O
       }
     }
     result
+  }
+
+  private def indexOrder[T](node1: GraphNode[T], node2: GraphNode[T]): Boolean = {
+    val arr1 = node1.index.split('.').map(_.toInt)
+    val arr2 = node2.index.split('.').map(_.toInt)
+    arrayOrder(arr1, arr2)
   }
 
   def main(args: Array[String]): Unit = {

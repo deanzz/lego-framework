@@ -14,7 +14,7 @@ class TypesafeConfigLogicalParserSpec extends FlatSpec {
     val conf = ConfigLoader.load(path, None)
     val nodes = TypesafeConfigLogicalParser.parse(conf)
     nodes.foreach(println)
-    assert(nodes.length === 2)
+    assert(nodes.length === 3)
   }*/
 
   /*it should "parse application succeed" in {
@@ -30,6 +30,6 @@ class TypesafeConfigLogicalParserSpec extends FlatSpec {
     val conf = ConfigLoader.load(path, None)
     val nodes = TypesafeConfigLogicalParser.parse(conf)
     nodes.foreach(println)
-    assert(nodes.length === 2)
+    assert(nodes.length === 33)
   }
 }
