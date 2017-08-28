@@ -1,4 +1,4 @@
-package cn.dean.lego.core.classloader;
+package cn.dean.lego.common.loader.classloader;
 
 /**
  * Created by deanzhang on 2017/5/26.

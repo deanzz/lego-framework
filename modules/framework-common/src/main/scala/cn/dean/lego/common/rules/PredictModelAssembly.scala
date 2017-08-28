@@ -7,6 +7,7 @@ import org.apache.spark.rdd.RDD
 /**
   * Created by deanzhang on 15/12/29.
   */
+@Deprecated
 trait PredictModelAssembly extends Component{
   /**
     *
@@ -33,10 +34,10 @@ trait PredictModelAssembly extends Component{
   def succeed: (Boolean, String)
 
   override def run(sc: SparkContext, config: Option[Config] = None,
-                   prevStepRDD: Option[RDD[String]] = None): Option[AssemblyResult] = {
+                   prevStepRDD: Option[RDD[String]] = None): Option[ComponentResult] = {
     val resultOpt = predict(sc, config.get, prevStepRDD)
     val (succd, message) = succeed
-    Some(AssemblyResult(succd, message, resultOpt))
+    Some(ComponentResult(succd, message, resultOpt))
   }
 
 }

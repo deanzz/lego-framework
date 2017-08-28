@@ -3,7 +3,7 @@ package cn.dean.lego.core
 import java.net.InetAddress
 
 import cn.dean.lego.common.log.Logger
-import cn.dean.lego.common.rules.AssemblyResult
+import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.common.utils.{MailAPI, TimerMeter, WechatAPI}
 import cn.dean.lego.common.config.{ConfigLoader, MailConf, WechatConf}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -90,7 +90,7 @@ object Main {
         val origMsg = result.get.message
         result.get.copy(message = s"Total Elasped Time = ${elaspedTime}s\n$origMsg")
       } else
-        AssemblyResult(succeed = false, "No assembly enabled, please check the configuration [assemblies -> enable] under application.conf of module", None)
+        ComponentResult(succeed = false, "No assembly enabled, please check the configuration [assemblies -> enable] under application.conf of module", None)
     } match {
         //任务执行成功处理
       case Success(r) =>

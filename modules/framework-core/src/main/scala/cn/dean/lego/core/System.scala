@@ -1,9 +1,9 @@
 package cn.dean.lego.core
 
-import cn.dean.lego.common.rules.{AssemblyResult, Component}
+import cn.dean.lego.common.rules.{ComponentResult, Component}
 import cn.dean.lego.common.utils.TimerMeter
 import cn.dean.lego.common.config._
-import cn.dean.lego.core.exceptions.PartNotFoundException
+import cn.dean.lego.common.exceptions.PartNotFoundException
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -34,8 +34,8 @@ class System(config: Config) extends Component{
     * @return 返回System的执行结果
     */
   override def run(sc: SparkContext, conf: Option[Config] = None,
-                   prevStepRDD: Option[RDD[String]] = None): Option[AssemblyResult] = {
-    var result: Option[AssemblyResult] = None
+                   prevStepRDD: Option[RDD[String]] = None): Option[ComponentResult] = {
+    var result: Option[ComponentResult] = None
     import scala.util.control.Breaks.{break, breakable}
     val mailBody = new StringBuilder
     breakable {

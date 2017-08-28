@@ -1,8 +1,9 @@
 package cn.dean.lego.core
 
-import cn.dean.lego.common.rules.{AssemblyResult, Component}
+import cn.dean.lego.common.rules.{Component, ComponentResult}
 import cn.dean.lego.common.utils.TimerMeter
 import cn.dean.lego.common.config.AssemblyConf
+import cn.dean.lego.common.loader.ComponentLoader
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -42,10 +43,10 @@ class Module(val config: Config) extends Component {
     * @return 返回Moduel的执行结果
     */
   override def run(sc: SparkContext, conf: Option[Config] = None,
-                   prevStepRDD: Option[RDD[String]] = None): Option[AssemblyResult] = {
+                   prevStepRDD: Option[RDD[String]] = None): Option[ComponentResult] = {
     //上一步assembly的执行结果RDD
     var lastResOpt: Option[RDD[String]] = prevStepRDD
-    var result: Option[AssemblyResult] = None
+    var result: Option[ComponentResult] = None
     val mailBody = new StringBuilder
     import Breaks.{break, breakable}
     breakable {

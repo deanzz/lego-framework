@@ -1,4 +1,4 @@
-package cn.dean.lego.core
+package cn.dean.lego.common.loader
 
 import java.io.File
 

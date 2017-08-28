@@ -1,6 +1,6 @@
 package cn.dean.lego.core
 
-import cn.dean.lego.common.rules.{AssemblyResult, Component}
+import cn.dean.lego.common.rules.{ComponentResult, Component}
 import cn.dean.lego.common.utils.TimerMeter
 import cn.dean.lego.common.config._
 import com.typesafe.config.Config
@@ -40,8 +40,8 @@ class Application(config: Config,
     * @return 返回Application执行结果
     */
   override def run(sc: SparkContext, conf: Option[Config] = None,
-                   prevStepRDD: Option[RDD[String]] = None): Option[AssemblyResult] = {
-    var result: Option[AssemblyResult] = None
+                   prevStepRDD: Option[RDD[String]] = None): Option[ComponentResult] = {
+    var result: Option[ComponentResult] = None
     import scala.util.control.Breaks.{break, breakable}
     val mailBody = new StringBuilder
     breakable {

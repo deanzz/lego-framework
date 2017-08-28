@@ -1,4 +1,4 @@
-package cn.dean.lego.core.exceptions
+package cn.dean.lego.common.exceptions
 
 /**
   * Created by deanzhang on 2016/12/27.
