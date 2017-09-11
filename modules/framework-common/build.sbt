@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   //"com.ning" % "async-http-client" % "1.9.38",
   "org.scalaj" %% "scalaj-http" % "2.3.0",
   "org.scaldi" % "scaldi_2.11" % "0.5.8",
+  "org.scaldi" % "scaldi-akka_2.11" % "0.5.8",
   "org.scalatest" % "scalatest_2.11" % "3.0.4" % "test"
 )
 

@@ -2,8 +2,10 @@ package cn.dean.lego.graph.logicplan
 
 import com.typesafe.config.Config
 import cn.dean.lego.common.config.ConfigLoader
+import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.models.NodeType
 import cn.dean.lego.graph.models.GraphNode
+import scaldi.Injectable.inject
 import scaldi.Injector
 
 import scala.collection.mutable
@@ -15,6 +17,7 @@ import scala.collection.JavaConverters._
   */
 class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogicalParser[Config, (Config, Option[Config])] {
 
+  private val logger = inject[Logger]
   override def parse(conf: Config): Seq[GraphNode[(Config, Option[Config])]] = {
     //应用类型，system, application or module
     val startType = NodeType.withName(conf.getString("type"))

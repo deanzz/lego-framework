@@ -1,13 +1,14 @@
 package cn.dean.lego.graph.physicalplan
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream._
 import akka.stream.javadsl.RunnableGraph
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink, Source}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import cn.dean.lego.common.exceptions.FlowRunFailedException
 import cn.dean.lego.common.loader.ComponentLoader
+import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.models.NodeType
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.graph.models.GraphNode
@@ -15,84 +16,151 @@ import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import scaldi.Injectable.inject
 import scaldi.Injector
+import scaldi.akka.AkkaInjectable
 
 /**
   * Created by deanzhang on 2017/8/22.
   */
 
-class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[(Config, Option[Config]), RunnableGraph[(NotUsed, NotUsed)]] {
+class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[(Config, Option[Config]), RunnableGraph[NotUsed]] {
 
-  implicit val actorSystem: ActorSystem = inject[ActorSystem]
+  private implicit val actorSystem: ActorSystem = inject[ActorSystem]
+  private val logger = inject[Logger]
 
-  val decider: Supervision.Decider = {
-    case _: IllegalArgumentException => Supervision.Restart
+  private val notifyActor = AkkaInjectable.injectActorRef[NotifyActor]("notifyActor")
+  logger.info("Start up notifyActor")
+
+  private val decider: Supervision.Decider = {
+    case _: IllegalArgumentException =>
+      Supervision.Restart
     case e =>
-      val result = ComponentResult(succeed = false, s"Got exception: $e", None)
-      // actor ! result
-      Supervision.Stop
-    /*val stop = Supervision.Stop
-    system.terminate()
-    stop*/
+      val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
+      val err = s"${e.toString}\n$lstTrace"
+      logger.error(err)
+      val result = ComponentResult(succeed = false, s"Got exception: $err", None)
+      val stop = Supervision.Stop
+      notifyActor ! result
+      stop
   }
 
   // implicit actor materializer
-  implicit val materializer = ActorMaterializer(ActorMaterializerSettings(actorSystem).withSupervisionStrategy(decider))
+  private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(actorSystem).withSupervisionStrategy(decider))
 
-  override def parse(sc: SparkContext, nodes: Seq[GraphNode[(Config, Option[Config])]]): RunnableGraph[(NotUsed, NotUsed)] = {
+  override def parse(sc: SparkContext, nodes: Seq[GraphNode[(Config, Option[Config])]]): RunnableGraph[NotUsed] = {
 
     val source = Source.single(Seq(ComponentResult(succeed = true, "start", None)))
-    //todo 需要创建sinkActor
-    val sink = Sink.actorRef(null, onCompleteMessage = "finished")
-    RunnableGraph.fromGraph(GraphDSL.create(source, sink)((_, _)) {
+    val sink = Sink.actorRef(notifyActor, onCompleteMessage = "notify finished")
+    RunnableGraph.fromGraph(GraphDSL.create() {
       implicit builder =>
-        (src, snk) =>
-          import GraphDSL.Implicits._
-          val flowMap = nodes.tail.map {
-            n =>
-              val flow = generateFlow(sc, n.nodeType, n.info._1, n.info._2)
-              (n.index, flow)
-          }.toMap
+        //(src, snk) =>
+        import GraphDSL.Implicits._
+        val flowMap = nodes.map {
+          n =>
+            val flow = builder.add(generateFlow(sc, n.nodeType, n.info._1, n.info._2))
+            (n.index, flow)
+        }.toMap
 
-          nodes.foreach {
-            n =>
-              val currFlow = builder.add(flowMap(n.index))
+        /*nodes.foreach{
+          n =>
+            val flow = flowMap(n.index)
+            val input = n.inputs.map(i => flowMap(i.index))
+            if(input.isEmpty)
+              builder.add(source) ~> flow
+           /* else
+              input.head ~> flow*/
 
+            val output = n.outputs.map(o => flowMap(o.index))
+
+            if(output.isEmpty)
+              flow ~> builder.add(sink)
+            else
+              flow ~> output.head
+
+        }*/
+
+        val nonEmptyOutputNodes = nodes.filter(_.outputs.nonEmpty)
+        nonEmptyOutputNodes.foreach {
+          n =>
+            val currFlow = flowMap(n.index)
+
+            val inputs = n.inputs.map(i => flowMap(i.index))
+            if (inputs.isEmpty) {
+              builder.add(source) ~> currFlow
+            } else {
+              if (inputs.length > 1) {
+                val merge = builder.add(Merge[Seq[ComponentResult]](inputs.length))
+                inputs.indices.foreach {
+                  idx =>
+                    inputs(idx) ~> merge.in(idx)
+                }
+                merge.out ~> currFlow
+              }
+            }
+
+            val outputs = n.outputs.map(o => flowMap(o.index))
+            /*if (outputs.isEmpty) {
+              currFlow ~> snk
+            } else {*/
+            if (outputs.length > 1) {
+              val broadcast = builder.add(Broadcast[Seq[ComponentResult]](outputs.length))
+              currFlow ~> broadcast
+              outputs.indices.foreach {
+                idx =>
+                  broadcast.out(idx) ~> outputs(idx)
+              }
+            } else {
+              //todo 这里有问题 outputs都是一个 所以output节点 [Map.in] is already connected，需要改逻辑计划
+              if (outputs.nonEmpty)
+                currFlow ~> outputs.head
+            }
+          //}
+        }
+
+        //generate final merge
+        val emptyOutputlNodes = nodes.filter(_.outputs.isEmpty)
+        if (emptyOutputlNodes.length > 1){
+          val finalMerge = builder.add(Merge[Seq[ComponentResult]](emptyOutputlNodes.length))
+          emptyOutputlNodes.indices.foreach {
+            idx =>
+              val n = emptyOutputlNodes(idx)
+              val currFlow = flowMap(n.index)
               val inputs = n.inputs.map(i => flowMap(i.index))
-              if (inputs.isEmpty) {
-                src ~> currFlow
-              } else {
-                if (inputs.length > 1) {
-                  val merge = builder.add(Merge[Seq[ComponentResult]](inputs.length))
-                  inputs.indices.foreach {
-                    idx =>
-                      builder.add(inputs(idx)) ~> merge.in(idx)
-                  }
-                  merge.out ~> currFlow
-                } else {
-                  builder.add(inputs.head) ~> currFlow
+              if (inputs.length > 1) {
+                val merge = builder.add(Merge[Seq[ComponentResult]](inputs.length))
+                inputs.indices.foreach {
+                  idx =>
+                    inputs(idx) ~> merge.in(idx)
                 }
+                merge.out ~> currFlow
               }
 
-              val outputs = n.outputs.map(o => flowMap(o.index))
-              if (outputs.isEmpty) {
-                currFlow ~> snk
-              } else {
-                if (outputs.length > 1) {
-                  val broadcast = builder.add(Broadcast[Seq[ComponentResult]](outputs.length))
-                  currFlow ~> broadcast
-                  outputs.indices.foreach {
-                    idx =>
-                      broadcast.out(idx) ~> builder.add(outputs(idx).async)
-                  }
-                } else {
-                  currFlow ~> builder.add(outputs.head)
-                }
-              }
+              currFlow ~> finalMerge.in(idx)
           }
-          ClosedShape
+          finalMerge.out ~> sink
+        } else {
+          val n = emptyOutputlNodes.head
+          val currFlow = flowMap(n.index)
+          val inputs = n.inputs.map(i => flowMap(i.index))
+          if (inputs.length > 1) {
+            val merge = builder.add(Merge[Seq[ComponentResult]](inputs.length))
+            inputs.indices.foreach {
+              idx =>
+                inputs(idx) ~> merge.in(idx)
+            }
+            merge.out ~> currFlow
+          }
+          currFlow ~> sink
+        }
+
+        ClosedShape
     })
 
     //g.run(materializer)
+  }
+
+  def run(sc: SparkContext, nodes: Seq[GraphNode[(Config, Option[Config])]]): NotUsed = {
+    val g = parse(sc, nodes)
+    g.run(materializer)
   }
 
   /*
@@ -183,9 +251,9 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
       lastResult =>
         val name = structConf.getString("name")
         val index = structConf.getString("index")
-        nodeType match {
+        val res = nodeType match {
           case NodeType.assembly =>
-            val jarName = structConf.getString("jar-name")
+            /*val jarName = structConf.getString("jar-name")
             val className = structConf.getString("class-name")
             val assembly = ComponentLoader.load(jarName, className)
             val lastRdd = lastResult.head.result
@@ -194,10 +262,13 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
             val Some(currResult) = assembly.run(sc, paramConf, lastRdd)
             if (!currResult.succeed) {
               throw FlowRunFailedException(s"$nodeType [$index-$name] run failed, message: \n${currResult.message}")
-            } else Seq(currResult)
+            } else Seq(currResult)*/
+            Seq(ComponentResult(succeed = true, s"$nodeType [$index-$name]", None))
           case _ =>
             Seq(ComponentResult(succeed = true, s"$nodeType [$index-$name]", None))
         }
+        println(s"Finished $nodeType [$index-$name]")
+        res
     }
   }
 }
