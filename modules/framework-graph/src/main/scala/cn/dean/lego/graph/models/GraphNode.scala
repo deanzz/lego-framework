@@ -9,15 +9,22 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by deanzhang on 2017/8/19.
   */
-case class GraphNode[T](index: String, nodeType: NodeType.Value, info: T, inputs: ListBuffer[GraphNode[T]], outputs: ListBuffer[GraphNode[T]]) {
+
+case class GraphNode[T](index: Int/*, nodeType: NodeType.Value*/, info: T, inputs: ListBuffer[GraphNode[T]], outputs: ListBuffer[GraphNode[T]]) {
   @Override
   override def toString: String = {
-    val blank = nodeType match {
+    /*val blank = nodeType match {
       case NodeType.module => "     "
       case NodeType.assembly => "   "
       case _ => ""
     }
-    s"$nodeType$blank, index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"
+    s"$nodeType$blank, index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"*/
+    info match {
+      case v: NodeProp =>
+        s"originIndex: ${v.originIndex}, nodeType: ${v.nodeType}, index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"
+      case _ => s"index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"
+    }
+
   }
 }
 

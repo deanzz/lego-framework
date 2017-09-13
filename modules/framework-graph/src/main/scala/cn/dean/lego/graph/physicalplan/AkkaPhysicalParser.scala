@@ -11,7 +11,7 @@ import cn.dean.lego.common.loader.ComponentLoader
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.models.NodeType
 import cn.dean.lego.common.rules.ComponentResult
-import cn.dean.lego.graph.models.GraphNode
+import cn.dean.lego.graph.models.{GraphNode, NodeProp}
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import scaldi.Injectable.inject
@@ -22,7 +22,7 @@ import scaldi.akka.AkkaInjectable
   * Created by deanzhang on 2017/8/22.
   */
 
-class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[(Config, Option[Config]), RunnableGraph[NotUsed]] {
+class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[NodeProp, RunnableGraph[NotUsed]] {
 
   private implicit val actorSystem: ActorSystem = inject[ActorSystem]
   private val logger = inject[Logger]
@@ -46,7 +46,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
   // implicit actor materializer
   private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(actorSystem).withSupervisionStrategy(decider))
 
-  override def parse(sc: SparkContext, nodes: Seq[GraphNode[(Config, Option[Config])]]): RunnableGraph[NotUsed] = {
+  override def parse(sc: SparkContext, nodes: Seq[GraphNode[NodeProp]]): RunnableGraph[NotUsed] = {
 
     val source = Source.single(Seq(ComponentResult(succeed = true, "start", None)))
     val sink = Sink.actorRef(notifyActor, onCompleteMessage = "notify finished")
@@ -56,7 +56,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
         import GraphDSL.Implicits._
         val flowMap = nodes.map {
           n =>
-            val flow = builder.add(generateFlow(sc, n.nodeType, n.info._1, n.info._2))
+            val flow = builder.add(generateFlow(sc, n.info.nodeType, n.info.structConf, n.info.paramConf))
             (n.index, flow)
         }.toMap
 
@@ -158,7 +158,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
     //g.run(materializer)
   }
 
-  def run(sc: SparkContext, nodes: Seq[GraphNode[(Config, Option[Config])]]): NotUsed = {
+  def run(sc: SparkContext, nodes: Seq[GraphNode[NodeProp]]): NotUsed = {
     val g = parse(sc, nodes)
     g.run(materializer)
   }

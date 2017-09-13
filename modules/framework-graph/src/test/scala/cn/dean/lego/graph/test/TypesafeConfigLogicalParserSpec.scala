@@ -37,7 +37,7 @@ class TypesafeConfigLogicalParserSpec extends FlatSpec {
 
   it should "parse system succeed" in {
     val nodes = logicalParser.parse(conf)
-    nodes.foreach(println)
+    //nodes.foreach(println)
     assert(nodes.length === 33)
   }
 
