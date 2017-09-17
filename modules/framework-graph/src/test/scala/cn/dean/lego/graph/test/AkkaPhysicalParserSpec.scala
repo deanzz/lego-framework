@@ -1,3 +1,4 @@
+/*
 package cn.dean.lego.graph.test
 
 import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
@@ -32,3 +33,4 @@ class AkkaPhysicalParserSpec extends FlatSpec{
   }*/
 
 }
+*/

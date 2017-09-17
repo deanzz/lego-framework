@@ -4,7 +4,7 @@ import akka.actor.{ActorSystem, Props}
 import cn.dean.lego.common.config.ConfigLoader
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
-import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, NotifyActor}
+//import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, NotifyActor}
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import scaldi.Module
@@ -28,13 +28,13 @@ class GraphModule(configPath: String) extends Module {
 
   bind[ActorSystem] to ActorSystem("lego-framework", inject[Config]) destroyWith (_.terminate())
 
-  binding identifiedBy 'notifyActor to {
+  /*binding identifiedBy 'notifyActor to {
     implicit val actorSystem: ActorSystem = inject[ActorSystem]
     actorSystem.actorOf(Props[NotifyActor], "notifyActor")
-  }
+  }*/
 
   bind[TypesafeConfigLogicalParser] to new TypesafeConfigLogicalParser
 
-  bind[AkkaPhysicalParser] to new AkkaPhysicalParser
+  //bind[AkkaPhysicalParser] to new AkkaPhysicalParser
 
 }

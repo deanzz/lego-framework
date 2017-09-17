@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
   * Created by deanzhang on 2017/8/19.
   */
 
-case class GraphNode[T](index: Int/*, nodeType: NodeType.Value*/, info: T, inputs: ListBuffer[GraphNode[T]], outputs: ListBuffer[GraphNode[T]]) {
+case class GraphNode[T](id: Long, info: T, inputs: ListBuffer[GraphNode[T]], outputs: ListBuffer[GraphNode[T]]) {
   @Override
   override def toString: String = {
     /*val blank = nodeType match {
@@ -21,8 +21,8 @@ case class GraphNode[T](index: Int/*, nodeType: NodeType.Value*/, info: T, input
     s"$nodeType$blank, index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"*/
     info match {
       case v: NodeProp =>
-        s"originIndex: ${v.originIndex}, nodeType: ${v.nodeType}, index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"
-      case _ => s"index: $index, inputs: [${inputs.map(_.index).mkString("#")}], outputs: [${outputs.map(_.index).mkString("#")}]"
+        s"$id#${v.name}#${v.nodeType}#in:[${inputs.map(_.info.asInstanceOf[NodeProp].name).mkString(";")}]#out:[${outputs.map(_.info.asInstanceOf[NodeProp].name).mkString(";")}]"//#in2:[${inputs.map(_.id).mkString(";")}]#out2:[${outputs.map(_.id).mkString(";")}]
+      case _ => s"id: $id, inputs: [${inputs.map(_.id).mkString("#")}], outputs: [${outputs.map(_.id).mkString("#")}]"
     }
 
   }
