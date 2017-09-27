@@ -23,8 +23,8 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
 
   override def parse(conf: Config): Seq[GraphNode[NodeProp]] = {
     val nodes = extractNodes(conf)
-    /*println("nodes:")
-    nodes.foreach(println)*/
+    logger.info("nodes:")
+    nodes.foreach(n => logger.info(n.toString))
     nodes
   }
 
@@ -50,15 +50,14 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
 
     val seq = linkSubcomponents(rootNodes, nodeMap)
 
-
-    println("nodeMap:")
+    /*println("nodeMap:")
     nodeMap.foreach {
       case (k, v) =>
         v.foreach {
           n =>
             println(s"$k#$n")
         }
-    }
+    }*/
 
     seq
   }
@@ -67,7 +66,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def extractModule(conf: Config) = {
     val assemblySeq = getNodeProps(conf)
     val nodes = ListBuffer.empty[GraphNode[NodeProp]]
-    val baseId = System.currentTimeMillis()
+    val baseId = System.nanoTime()
     var idx = 0
     assemblySeq.map {
       asmblyProp =>
@@ -82,7 +81,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def extractApplication(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]]) = {
     val moduleSeq = getNodeProps(conf)
     var idx = 0
-    val baseId = System.currentTimeMillis()
+    val baseId = System.nanoTime()
     val nodes = ListBuffer.empty[GraphNode[NodeProp]]
     moduleSeq.map {
       moduleProp =>
@@ -99,7 +98,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def extractSystem(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]]) = {
     val appSeq = getNodeProps(conf)
     var idx = 0
-    val baseId = System.currentTimeMillis()
+    val baseId = System.nanoTime()
     val nodes = ListBuffer.empty[GraphNode[NodeProp]]
     appSeq.map {
       appProp =>

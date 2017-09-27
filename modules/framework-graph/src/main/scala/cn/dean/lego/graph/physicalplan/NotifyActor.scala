@@ -65,4 +65,5 @@ class NotifyActor(implicit injector: Injector) extends Actor {
       logger.info("Terminate actor system...")
       context.system.terminate()
   }
+
 }

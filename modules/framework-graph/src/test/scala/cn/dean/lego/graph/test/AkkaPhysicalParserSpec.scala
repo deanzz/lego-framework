@@ -1,4 +1,4 @@
-/*
+
 package cn.dean.lego.graph.test
 
 import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
@@ -12,8 +12,7 @@ import org.scalatest.FlatSpec
 
 class AkkaPhysicalParserSpec extends FlatSpec{
 
-  private val sysConf = "/Users/deanzhang/work/code/github/lego-framework/sample/systemA/conf/application.conf"
-  private val moduleConf = "/Users/deanzhang/work/code/github/lego-framework/sample/systemA/appA/moduleB/conf/application.conf"
+  private val sysConf = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
   implicit val injector = new GraphModule(sysConf)
 
   private val physicalParser = inject[AkkaPhysicalParser]
@@ -23,14 +22,17 @@ class AkkaPhysicalParserSpec extends FlatSpec{
     logicalParser.parse(inject[Config])
   }
 
-  //todo 逻辑执行计划节点的outputs有问题
   /*it should "run system succeed" in {
     val nodes = genGraphNodes
     nodes.foreach(println)
     physicalParser.run(inject[SparkContext], nodes)
 
-    assert(nodes.length === 33)
+    assert(nodes.length === 32)
   }*/
 
+  it should "test succeed" in {
+    physicalParser.test()
+  }
+
 }
-*/
+
