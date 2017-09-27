@@ -22,17 +22,17 @@ class AkkaPhysicalParserSpec extends FlatSpec{
     logicalParser.parse(inject[Config])
   }
 
-  /*it should "run system succeed" in {
+  it should "run system succeed" in {
     val nodes = genGraphNodes
     nodes.foreach(println)
     physicalParser.run(inject[SparkContext], nodes)
 
     assert(nodes.length === 32)
-  }*/
-
-  it should "test succeed" in {
-    physicalParser.test()
   }
+
+  /*it should "test succeed" in {
+    physicalParser.test()
+  }*/
 
 }
 

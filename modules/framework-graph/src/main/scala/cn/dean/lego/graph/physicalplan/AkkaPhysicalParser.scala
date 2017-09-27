@@ -25,6 +25,8 @@ import scaldi.akka.AkkaInjectable
 
 class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[NodeProp, RunnableGraph[NotUsed]] {
 
+  type Result = Seq[ComponentResult]
+
   private implicit val actorSystem: ActorSystem = inject[ActorSystem]
   private val logger = inject[Logger]
 
@@ -83,7 +85,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
         val endNodes = nodes.filter(_.outputs.isEmpty)
 
         if (endNodes.length > 1) {
-          val merge = builder.add(Merge[Seq[ComponentResult]](endNodes.length))
+          val merge = builder.add(Merge[Result](endNodes.length))
           merge.out ~> sink
           val inlets = merge.inSeq.map(new NodeIn(_))
           endNodes.foreach {
@@ -113,7 +115,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
 
   private def getFlow(implicit builder: GraphDSL.Builder[NotUsed], sc: SparkContext, node: GraphNode[NodeProp]) = {
     val name = node.info.structConf.getString("name")
-    val flow = builder.add(Flow[Seq[ComponentResult]].map {
+    val flow = builder.add(Flow[Result].map {
       lastResult =>
         /*val jarName = structConf.getString("jar-name")
         val className = structConf.getString("class-name")
@@ -127,16 +129,19 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
         } else Seq(currResult)*/
         //lastResult.zipWithIndex.foreach{case (r, i) => println(s"$i: $r")}
         //println(s"$name: ${lastResult.map(_.message).zipWithIndex}")
-        println(s"$name#${System.nanoTime()}")
+        println(s"$name#${System.nanoTime()}#${lastResult.map(_.message).mkString(",")}")
         Seq(ComponentResult(succeed = true, s"[$name]", None))
 
     })
 
     val inlets = (if (node.inputs.nonEmpty) {
       if (node.inputs.length > 1) {
-        val merge = builder.add(Merge[Seq[ComponentResult]](node.inputs.length))
+        /*val merge = builder.add(Merge[Result](node.inputs.length))
         merge.out ~> flow
-        merge.inSeq
+        merge.inSeq*/
+        val zipWith = builder.add(getZipWithNode(node.inputs.length))
+        zipWith.out ~> flow
+        zipWith.inlets.map(_.as[Result])
       } else {
         Seq(flow.in)
       }
@@ -146,7 +151,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
 
     val outlets = (if (node.outputs.nonEmpty) {
       if (node.outputs.length > 1) {
-        val broadcast = builder.add(Broadcast[Seq[ComponentResult]](node.outputs.length))
+        val broadcast = builder.add(Broadcast[Result](node.outputs.length))
         flow ~> broadcast.in
         //broadcast.outArray.foreach(_.async)
         broadcast.outArray.toSeq
@@ -157,6 +162,32 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
       Seq(flow.out)
     }).map(new NodeOut(_))
     (inlets, outlets)
+  }
+
+  private def getZipWithNode(length: Int) ={
+    length match {
+      case 2 => ZipWith[Result, Result, Result]((r1, r2) => r1 ++ r2)
+      case 3 => ZipWith[Result, Result, Result, Result]((r1, r2, r3) => r1 ++ r2 ++ r3)
+      case 4 => ZipWith[Result, Result, Result, Result, Result]((r1, r2, r3, r4) => r1 ++ r2 ++ r3 ++ r4)
+      case 5 => ZipWith[Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5) => r1 ++ r2 ++ r3 ++ r4 ++ r5)
+      case 6 => ZipWith[Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6)
+      case 7 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7)
+      case 8 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8)
+      case 9 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9)
+      case 10 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10)
+      case 11 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11)
+      case 12 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12)
+      case 13 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13)
+      case 14 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14)
+      case 15 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15)
+      case 16 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15 ++ r16)
+      case 17 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15 ++ r16 ++ r17)
+      case 18 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15 ++ r16 ++ r17 ++ r18)
+      case 19 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15 ++ r16 ++ r17 ++ r18 ++ r19)
+      case 20 => ZipWith[Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result, Result]((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19, r20) => r1 ++ r2 ++ r3 ++ r4 ++ r5 ++ r6 ++ r7 ++ r8 ++ r9 ++ r10 ++ r11 ++ r12 ++ r13 ++ r14 ++ r15 ++ r16 ++ r17 ++ r18 ++ r19 ++ r20)
+
+      case _ => throw new UnsupportedOperationException(s"Not supported ZipWith length [$length]")
+    }
   }
 
   def test() = {
