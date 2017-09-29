@@ -3,11 +3,11 @@ package cn.dean.lego.common.rules
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import scala.collection.immutable.Map
 
 /**
   * Created by deanzhang on 15/11/27.
   */
-@Deprecated
 trait CleanerAssembly extends Component{
   /**
     * Clean data
@@ -17,7 +17,7 @@ trait CleanerAssembly extends Component{
     * @return Data set RDD[String] of current job
     */
   def clean(sc: SparkContext, config: Config,
-            prevStepRDD: Option[RDD[String]] = None): Option[RDD[String]]
+            prevStepRDD: Option[Map[String, RDD[String]]] = None): Option[RDD[String]]
 
   /***
     * If job succeed
@@ -26,10 +26,12 @@ trait CleanerAssembly extends Component{
   def succeed: (Boolean, String)
 
   override def run(sc: SparkContext, config: Option[Config] = None,
-                   prevStepRDD: Option[RDD[String]] = None): Option[ComponentResult] = {
+                   prevStepRDD: Option[Map[String, RDD[String]]] = None): Option[ComponentResult] = {
     val resultOpt = clean(sc, config.get, prevStepRDD)
     val (succd, message) = succeed
-    Some(ComponentResult(succd, message, resultOpt))
+    val name = config.get.getString("name")
+    val result = resultOpt.map(r => Option(Map(name -> r))).getOrElse(None)
+    Some(ComponentResult(name, succd, message, result))
   }
 
 }

@@ -1,7 +1,7 @@
 package cn.dean.lego.graph.logicplan
 
-import com.typesafe.config.Config
-import cn.dean.lego.common.config.ConfigLoader
+import com.typesafe.config.{Config, ConfigValueFactory}
+import cn.dean.lego.common.config.{ConfigLoader, KeyValue}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.models.NodeType
 import cn.dean.lego.graph.models.{GraphNode, NodeProp}
@@ -20,10 +20,9 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
 
   private val logger = inject[Logger]
 
-
   override def parse(conf: Config): Seq[GraphNode[NodeProp]] = {
     val nodes = extractNodes(conf)
-    logger.info("nodes:")
+    logger.info("logicalPlan:")
     nodes.foreach(n => logger.info(n.toString))
     nodes
   }
@@ -38,32 +37,23 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
 
   private def extractNodes(config: Config): Seq[GraphNode[NodeProp]] = {
     val confType = config.getString("type")
+    //获取全局上下文参数
+    val contextParameters: Seq[KeyValue] = config.getConfigList("context.parameters").asScala.map(KeyValue.apply)
     val nodeMap = mutable.Map.empty[Long, Seq[GraphNode[NodeProp]]]
     val rootNodes = confType match {
       case "system" =>
-        extractSystem(config, nodeMap)
+        extractSystem(config, nodeMap, contextParameters)
       case "application" =>
-        extractApplication(config, nodeMap)
+        extractApplication(config, nodeMap, contextParameters)
       case "module" =>
-        extractModule(config)
+        extractModule(config, contextParameters)
     }
 
-    val seq = linkSubcomponents(rootNodes, nodeMap)
-
-    /*println("nodeMap:")
-    nodeMap.foreach {
-      case (k, v) =>
-        v.foreach {
-          n =>
-            println(s"$k#$n")
-        }
-    }*/
-
-    seq
+    linkSubcomponents(rootNodes, nodeMap)
   }
 
 
-  private def extractModule(conf: Config) = {
+  private def extractModule(conf: Config, contextParameters: Seq[KeyValue]) = {
     val assemblySeq = getNodeProps(conf)
     val nodes = ListBuffer.empty[GraphNode[NodeProp]]
     val baseId = System.nanoTime()
@@ -71,14 +61,19 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
     assemblySeq.map {
       asmblyProp =>
         val id = baseId + idx
-        val n = newNode(asmblyProp, id, idx, nodes)
+        var param = asmblyProp.paramConf.get
+        contextParameters.foreach{
+          kv =>
+            param = param.withValue(kv.key, ConfigValueFactory.fromAnyRef(kv.value))
+        }
+        val n = newNode(asmblyProp.copy(paramConf = Option(param)), id, idx, nodes)
         nodes += n
         idx += 1
         n
     }
   }
 
-  private def extractApplication(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]]) = {
+  private def extractApplication(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]], contextParameters: Seq[KeyValue]) = {
     val moduleSeq = getNodeProps(conf)
     var idx = 0
     val baseId = System.nanoTime()
@@ -89,13 +84,13 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
         val n = newNode(moduleProp, moduleId, idx, nodes)
         nodes += n
         idx += 1
-        val moduleSeq = extractModule(moduleProp.structConf)
+        val moduleSeq = extractModule(moduleProp.structConf, contextParameters)
         nodeMap += (moduleId -> moduleSeq)
         n
     }
   }
 
-  private def extractSystem(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]]) = {
+  private def extractSystem(conf: Config, nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]], contextParameters: Seq[KeyValue]) = {
     val appSeq = getNodeProps(conf)
     var idx = 0
     val baseId = System.nanoTime()
@@ -106,39 +101,75 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
         val n = newNode(appProp, appId, idx, nodes)
         nodes += n
         idx += 1
-        val appSeq = extractApplication(appProp.structConf, nodeMap)
+        val appSeq = extractApplication(appProp.structConf, nodeMap, contextParameters)
         nodeMap += (appId -> appSeq)
         n
     }
   }
+
   private def linkSubcomponents(rootNodeSeq: Seq[GraphNode[NodeProp]], nodeMap: mutable.Map[Long, Seq[GraphNode[NodeProp]]]) = {
 
     def link(nodeSeq: Seq[GraphNode[NodeProp]]) = {
-      val subNodeSeq = nodeSeq.map(n => nodeMap(n.id))
-
-      (1 until subNodeSeq.length).foreach{
-        currIdx =>
-          val currSeq = subNodeSeq(currIdx)
-          val prevSeq = subNodeSeq(currIdx - 1)
-          val currIn = currSeq.filter(_.inputs.isEmpty)
-          val prevOut = prevSeq.filter(_.outputs.isEmpty)
-          prevOut.foreach(_.outputs ++= currIn)
-          currIn.foreach(_.inputs ++= prevOut)
+      val subNodesInOut = nodeSeq.map{
+        n =>
+          val subNodes = nodeMap(n.id)
+          val outputs = n.outputs.flatMap(o => nodeMap(o.id))
+          val inputs = n.inputs.flatMap(o => nodeMap(o.id))
+          val subNodesIn = subNodes.filter(_.inputs.isEmpty)
+          val subNodesOut = subNodes.filter(_.outputs.isEmpty)
+          val inlets = inputs.filter(_.outputs.isEmpty)
+          val outlets = outputs.filter(_.inputs.isEmpty)
+          (subNodes, subNodesIn, subNodesOut, inlets, outlets)
       }
 
-      subNodeSeq.flatten
+      subNodesInOut.flatMap{
+        case (subNodes, subNodesIn, subNodesOut, inlets, outlets) =>
+          subNodesIn.foreach{
+            o =>
+              inlets.foreach{
+                i =>
+                  if(!o.inputs.contains(i))
+                    o.inputs += i
+              }
+          }
+          subNodesOut.foreach{
+            o =>
+              outlets.foreach{
+              i =>
+                if(!o.outputs.contains(i))
+                  o.outputs += i
+            }
+          }
+          inlets.foreach{
+            o =>
+              subNodesIn.foreach{
+                i =>
+                  if(!o.outputs.contains(i))
+                    o.outputs += i
+              }
+          }
+          outlets.foreach{
+            o =>
+              subNodesOut.foreach{
+                i =>
+                  if(!o.inputs.contains(i))
+                    o.inputs += i
+              }
+          }
+          subNodes
+      }
     }
 
     val rootType = rootNodeSeq.head.info.nodeType
     rootType match {
       case NodeType.application =>
         val moduleSeq = link(rootNodeSeq)
-        println("moduleSeq")
-        moduleSeq.foreach(println)
+        /*println("moduleSeq")
+        moduleSeq.foreach(println)*/
         val asmblySeq = link(moduleSeq)
-        println()
+        /*println()
         println("asmblySeq")
-        asmblySeq.foreach(println)
+        asmblySeq.foreach(println)*/
 
         asmblySeq
       case NodeType.module =>
@@ -177,7 +208,8 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def getNodeProps(conf: Config): Seq[NodeProp] = {
     val isModule = Try(conf.getConfigList("assemblies") != null).getOrElse(false)
     if (isModule) {
-      val assemblies = conf.getConfigList("assemblies").asScala.filter(c => c.getBoolean("enable")).sortWith {
+      val assemblyDir = conf.getString("assemblies-dir")
+      val assemblies = conf.getConfigList("assemblies").asScala.filter(c => c.getBoolean("enable")).map(_.withValue("assemblies-dir", ConfigValueFactory.fromAnyRef(assemblyDir))).sortWith {
         case (c1, c2) =>
           val a1 = c1.getString("index").split(".").map(_.toInt)
           val a2 = c2.getString("index").split(".").map(_.toInt)

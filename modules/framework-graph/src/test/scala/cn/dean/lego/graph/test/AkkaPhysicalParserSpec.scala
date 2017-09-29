@@ -27,7 +27,7 @@ class AkkaPhysicalParserSpec extends FlatSpec{
     nodes.foreach(println)
     physicalParser.run(inject[SparkContext], nodes)
 
-    assert(nodes.length === 32)
+    assert(nodes.length === 42)
   }
 
   /*it should "test succeed" in {

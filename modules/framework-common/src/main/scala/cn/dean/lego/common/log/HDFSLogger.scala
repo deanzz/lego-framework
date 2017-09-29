@@ -14,9 +14,9 @@ class HDFSLogger(logDir: String) extends LoggerAPI{
 
   val logPath = s"$logDir/$logFileName"
   private def log(typ: String, content: String): Unit = {
-    val line = s"${DateTime.now().toString("yyyy-MM-dd HH:mm:ss")}_ ${typ}_ $content\n"
+    val line = s"${DateTime.now().toString("yyyy-MM-dd HH:mm:ss")}_ ${typ}_ $content"
     println(line)
-    HDFSUtil.appendFile(logPath, line)
+    HDFSUtil.appendFile(logPath, line + "\n")
   }
 
   override def info(content: String): Unit = log("INFO", content)

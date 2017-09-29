@@ -11,12 +11,14 @@ import cn.dean.lego.common.utils.{MailAPI, WechatAPI}
 import com.typesafe.config.Config
 import scaldi.Injectable.inject
 import scaldi.Injector
+import scaldi.akka.AkkaInjectable
+
 import scala.util.Try
 
 /**
   * Created by deanzhang on 2017/8/22.
   */
-class NotifyActor(implicit injector: Injector) extends Actor {
+class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable{
   private val conf = inject[Config]
   private val logger = inject[Logger]
   //获取邮件配置
@@ -42,8 +44,9 @@ class NotifyActor(implicit injector: Injector) extends Actor {
   }
 
   override def receive: Receive = {
-    case r: ComponentResult =>
-      val subject =
+    case r: Seq[ComponentResult] =>
+      logger.info(s"NotifyActor.r = $r")
+      /*val subject =
         if (r.succeed) {
           val str = s"[${mailConf.subjectPrefix}][$serverInfo] $componentName execute succeed"
           logger.info(r.message)
@@ -60,8 +63,9 @@ class NotifyActor(implicit injector: Injector) extends Actor {
       if (wechatConf.enable) {
         val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, r.message, r.succeed)
         logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
-      }
+      }*/
 
+      //logger.info(s"finished physicalPlan at ${finish.toString("yyyy-MM-dd HH:mm:ss")}, elapsed time = ${finish.getMillis - start.getMillis}ms")
       logger.info("Terminate actor system...")
       context.system.terminate()
   }

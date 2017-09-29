@@ -15,7 +15,7 @@ class LocalLogger(logDir: String) extends LoggerAPI {
   val logPath = s"$logDir/$logFileName"
 
   private def log(typ: String, content: String) = {
-    val line = s"${DateTime.now().toString("yyyy-MM-dd HH:mm:ss")}_ ${typ}_ $content\n"
+    val line = s"${DateTime.now().toString("yyyy-MM-dd HH:mm:ss")}_ ${typ}_ $content"
     println(line)
     fileAppend(logPath, line)
   }
@@ -29,7 +29,7 @@ class LocalLogger(logDir: String) extends LoggerAPI {
     var writer: FileWriter = null
     try {
       writer = new FileWriter(filePath, true)
-      writer.write(content)
+      writer.write(content + "\n")
     } catch {
       case e: Exception => throw e
     } finally {
