@@ -6,14 +6,14 @@
 
 使用akka和scaldi重构框架，支持并行的流程。
 
-配置并行流程的方法：
-设置conf/application.conf中的index字段，其值存在"."，则表示有一层并行流程。
-比如，
-assembly [a]的index = 1
-assembly [b]的index = 1.1
-assembly [c]的index = 1.2
-assembly [d]的index = 2
-
+配置并行流程的方法：<br/>
+设置conf/application.conf中的index字段，其值存在"."，则表示有一层并行流程。<br/>
+比如，<br/>
+assembly [a]的index = 1<br/>
+assembly [b]的index = 1.1<br/>
+assembly [c]的index = 1.2<br/>
+assembly [d]的index = 2<br/>
+<br/>
 则b和c为一个并行流程，即整体执行流程图如下：
 
        |-> b -|
