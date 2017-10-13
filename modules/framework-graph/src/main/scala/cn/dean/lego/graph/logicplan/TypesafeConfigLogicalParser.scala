@@ -170,7 +170,6 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
         /*println()
         println("asmblySeq")
         asmblySeq.foreach(println)*/
-
         asmblySeq
       case NodeType.module =>
         link(rootNodeSeq)

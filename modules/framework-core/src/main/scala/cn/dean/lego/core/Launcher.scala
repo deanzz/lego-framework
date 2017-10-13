@@ -25,7 +25,6 @@ object Launcher {
       if (args.length == 1)
         args(0)
       else {
-        //logger.warn("No specify configuration file path. Using default configuration file path")
         "conf/application.conf"
       }
     implicit val injector = new GraphModule(configPath)
@@ -35,10 +34,7 @@ object Launcher {
     val logger = inject[Logger]
     val sc = inject[SparkContext]
     Try {
-      //println(s"physicalParser.run start = ${System.nanoTime()}")
       physicalParser.run(sc, logicalNodes)
-      /*println(s"physicalParser.run end = ${System.nanoTime()}")
-      //sc.stop()*/
     } match {
       case Success(res) => res
       case Failure(e) =>
