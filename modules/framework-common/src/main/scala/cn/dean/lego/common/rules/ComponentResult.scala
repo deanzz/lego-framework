@@ -1,6 +1,7 @@
 package cn.dean.lego.common.rules
 
 import org.apache.spark.rdd.RDD
+
 import scala.collection.immutable.Map
 
 /**

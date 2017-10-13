@@ -11,7 +11,7 @@ import scaldi.Injectable.inject
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Created by deanzhang on 15/11/27.
+  * Created by deanzhang on 17/10/2.
   */
 object Launcher {
 
@@ -33,8 +33,12 @@ object Launcher {
     val logicalNodes = logicalParser.parse(inject[Config])
     val physicalParser = inject[AkkaPhysicalParser]
     val logger = inject[Logger]
+    val sc = inject[SparkContext]
     Try {
-      physicalParser.run(inject[SparkContext], logicalNodes)
+      //println(s"physicalParser.run start = ${System.nanoTime()}")
+      physicalParser.run(sc, logicalNodes)
+      /*println(s"physicalParser.run end = ${System.nanoTime()}")
+      //sc.stop()*/
     } match {
       case Success(res) => res
       case Failure(e) =>

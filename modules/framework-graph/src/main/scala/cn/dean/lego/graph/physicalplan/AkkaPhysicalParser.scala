@@ -2,7 +2,7 @@
 package cn.dean.lego.graph.physicalplan
 
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.javadsl.RunnableGraph
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink, Source, ZipWith}
@@ -11,19 +11,19 @@ import cn.dean.lego.common.loader.ComponentLoader
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.graph.models.{GraphNode, NodeProp}
+import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, FinalMergeSize, PlanStart}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.joda.time.DateTime
 import scaldi.Injector
 import scaldi.akka.AkkaInjectable
-
 import scala.collection.immutable.Map
 
 /**
   * Created by deanzhang on 2017/8/22.
   */
 
-class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[NodeProp, RunnableGraph[NotUsed]] with AkkaInjectable{
+class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParser[NodeProp, RunnableGraph[NotUsed]] with AkkaInjectable {
 
   type Result = Seq[ComponentResult]
 
@@ -40,11 +40,9 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
       val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
       val err = s"${e.toString}\n$lstTrace"
       logger.error(err)
-      val result = ComponentResult("", succeed = false, s"Got exception: $err", None)
-      val stop = Supervision.Stop
+      val result = Seq(ComponentResult("got~exception", succeed = false, s"Got exception: $err", None))
       notifyActor ! result
-      stop
-    //Supervision.resume
+      Supervision.Stop
   }
 
   // implicit actor materializer
@@ -52,14 +50,14 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
 
   import GraphDSL.Implicits._
 
-  override def parse(sc: SparkContext, nodes: Seq[GraphNode[NodeProp]]): RunnableGraph[NotUsed] = {
+  override def parse(nodes: Seq[GraphNode[NodeProp]]): RunnableGraph[NotUsed] = {
     val source = Source.single(Seq(ComponentResult("start", succeed = true, "start", None)))
     val sink = Sink.actorRef(notifyActor, onCompleteMessage = "notify finished")
     RunnableGraph.fromGraph(GraphDSL.create() {
       implicit builder =>
         val flowMap = nodes.map {
           n =>
-            val inOuts = getFlow(builder, sc, n)
+            val inOuts = getFlow(builder, n)
             (n.id, inOuts)
         }.toMap
 
@@ -83,6 +81,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
 
         val endNodes = nodes.filter(_.outputs.isEmpty)
         if (endNodes.length > 1) {
+          notifyActor ! FinalMergeSize(endNodes.length)
           val merge = builder.add(Merge[Result](endNodes.length))
           merge.out ~> sink
           val inlets = merge.inSeq.map(new NodeIn(_))
@@ -103,21 +102,21 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
     })
   }
 
-  def run(sc: SparkContext, nodes: Seq[GraphNode[NodeProp]]): NotUsed = {
-    val g = parse(sc, nodes)
+  def run(sc: SparkContext, nodes: Seq[GraphNode[NodeProp]]): Unit = {
+    val g = parse(nodes)
     val start = DateTime.now
-    logger.info(s"start running physicalPlan at ${start.toString("yyyy-MM-dd HH:mm:ss")}")
-    val res = g.run(materializer)
-    //val finish = DateTime.now
-    res
+    logger.info(s"start running physicalPlan at ${start.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${start.getMillis}")
+    notifyActor ! PlanStart(start)
+    g.run(materializer)
   }
 
-  private def getFlow(implicit builder: GraphDSL.Builder[NotUsed], sc: SparkContext, node: GraphNode[NodeProp]) = {
+  private def getFlow(implicit builder: GraphDSL.Builder[NotUsed], node: GraphNode[NodeProp]) = {
     val name = node.info.structConf.getString("name")
     val flow = builder.add(Flow[Result].map {
       lastResult =>
         val start = DateTime.now
-        logger.info(s"start [$name] at ${start.toString("yyyy-MM-dd HH:mm:ss")}")
+        val startLog = s"started at ${start.toString("yyyy-MM-dd HH:mm:ss")}; "
+        logger.info(s"${Thread.currentThread().getName}: $name - $startLog")
         val assemblyDir = node.info.structConf.getString("assemblies-dir")
         val jarName = s"$assemblyDir/${node.info.structConf.getString("jar-name")}"
         val className = node.info.structConf.getString("class-name")
@@ -134,13 +133,23 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
               None
         }
         //执行assembly，获得结果
-        val Some(currResult) = assembly.run(sc, node.info.paramConf, lastRdd)
-        val result = if (!currResult.succeed) {
-          throw FlowRunFailedException(s"[$name] run failed, message: \n${currResult.message}")
-        } else Seq(currResult)
+        val Some(currResult) = assembly.run(inject[SparkContext], node.info.paramConf, lastRdd)
         val finish = DateTime.now
+        val finishLog = s"finished at ${finish.toString("yyyy-MM-dd HH:mm:ss")}, elapsed time = ${finish.getMillis - start.getMillis}ms. "
         logger.info(s"$name#in:[${lastResult.map(_.name).mkString(";")}]#out:[${currResult.name};${currResult.succeed};${currResult.message};${currResult.result}]")
-        logger.info(s"end [$name] at ${finish.toString("yyyy-MM-dd HH:mm:ss")}, elapsed time = ${finish.getMillis - start.getMillis}ms")
+        logger.info(s"${Thread.currentThread().getName}: end [$name] at ${finish.toString("yyyy-MM-dd HH:mm:ss")}, elapsed time = ${finish.getMillis - start.getMillis}ms")
+
+        val succeedLog = if (currResult.succeed) "execute succeed. " else "execute failed!!!!! "
+        val logBuilder = StringBuilder.newBuilder
+        logBuilder.append(s"$name: ")
+        logBuilder.append(succeedLog)
+        logBuilder.append(startLog)
+        logBuilder.append(finishLog)
+        logBuilder.append(s"\n\t${currResult.message}")
+        notifyActor ! AddResultLog(logBuilder.toString)
+        val result = if (!currResult.succeed) {
+          throw FlowRunFailedException(s"${Thread.currentThread().getName}: [$name] run failed, message: \n${currResult.message}")
+        } else Seq(currResult)
         result
     })
 
@@ -230,65 +239,8 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
     })
     g.run(materializer)
   }*/
-}
 
-
-/*
-     val f1 = Flow[Seq[ComponentResult]].map{
-        lastResult =>
-          val name = "name"
-          val index = "index"
-          val nodeType = NodeType.assembly
-          nodeType match {
-            case NodeType.assembly =>
-              val jarName = "jar-name"
-              val className = "class-name"
-              val assembly = ComponentLoader.load(jarName, className)
-              val lastRdd = lastResult.head.result
-              //执行assembly，获得结果
-              val Some(currResult) = assembly.run(sc, null, lastRdd)
-              if(!currResult.succeed){
-                throw FlowRunFailedException(s"$nodeType [$index-$name] run failed, message: \n${currResult.message}")
-              } else Seq(currResult)
-            case _ =>
-              Seq(ComponentResult(succeed = true, s"$nodeType [$index-$name]", None))
-          }
-      }
-
-      val f2 = Flow[Seq[ComponentResult]].map{
-        lastResult =>
-          val name = "name"
-          val index = "index"
-          val nodeType = NodeType.assembly
-          nodeType match {
-            case NodeType.assembly =>
-              val jarName = "jar-name"
-              val className = "class-name"
-              val assembly = ComponentLoader.load(jarName, className)
-              val lastRdd = lastResult.head.result
-              //执行assembly，获得结果
-              val Some(currResult) = assembly.run(sc, null, lastRdd)
-              if(!currResult.succeed){
-                throw FlowRunFailedException(s"$nodeType [$index-$name] run failed, message: \n${currResult.message}")
-              } else Seq(currResult)
-            case _ =>
-              Seq(ComponentResult(succeed = true, s"$nodeType [$index-$name]", None))
-          }
-      }
-
-      val source = builder.add(Source.single(Seq(ComponentResult(true, "", None))))
-
-      val flow1 = builder.add(f1)
-      val flow2 = builder.add(f2)
-
-      val broadcast = builder.add(Broadcast[Seq[ComponentResult]](2))
-
-      val merge = builder.add(Merge[Seq[ComponentResult]](2))
-
-      flow1 ~> broadcast ~> flow1 ~> merge ~> flow2
-                         broadcast ~> flow2 ~> merge*/
-
-/*private def generateShape(structConf: Config, paramConf: Option[Config]): GraphStage[FlowShape[ComponentResult, ComponentResult]] = {
+  /*private def generateShape(structConf: Config, paramConf: Option[Config]): GraphStage[FlowShape[ComponentResult, ComponentResult]] = {
   new GraphStage[FlowShape[ComponentResult, ComponentResult]] {
     val in = Inlet[ComponentResult]("flowStage.in")
     val out = Outlet[ComponentResult]("flowStage.out")
@@ -315,6 +267,10 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
     }
   }
 }*/
+
+}
+
+
 
 
 

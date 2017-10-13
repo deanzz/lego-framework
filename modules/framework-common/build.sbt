@@ -5,7 +5,7 @@ version := "3.0.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" % "spark-core_2.11" % "2.1.1" /*% "provided"*/,
+  "org.apache.spark" % "spark-core_2.11" % "2.1.1" % "provided",
   "joda-time" % "joda-time" % "2.9",
   "org.joda" % "joda-convert" % "1.8.1",
   "ch.qos.logback" % "logback-classic" % "1.1.3",

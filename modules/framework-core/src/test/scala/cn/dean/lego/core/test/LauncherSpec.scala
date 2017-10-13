@@ -5,11 +5,11 @@ import org.scalatest.FlatSpec
 
 class LauncherSpec  extends FlatSpec{
 
-  it should "run system succeed" in {
+ /* it should "run system succeed" in {
     val confPath = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
     Launcher.main(Array(confPath))
 
     //assert(nodes.length === 42)
-  }
+  }*/
 
 }

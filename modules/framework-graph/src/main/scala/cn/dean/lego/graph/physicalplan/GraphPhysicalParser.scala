@@ -9,6 +9,6 @@ import org.apache.spark.SparkContext
   */
 trait GraphPhysicalParser[I, O] {
 
-  def parse(sc: SparkContext, nodes: Seq[GraphNode[I]]): O
+  def parse(nodes: Seq[GraphNode[I]]): O
 
 }
