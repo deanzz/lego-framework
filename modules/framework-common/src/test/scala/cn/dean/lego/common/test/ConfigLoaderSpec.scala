@@ -10,7 +10,7 @@ import org.scalatest.FlatSpec
 class ConfigLoaderSpec extends FlatSpec {
 
   "ConfigLoader" should "parse path succeed" in {
-    val path = "/Users/deanzhang/work/code/github/lego-framework/sample/systemA/appA/moduleA/conf/application.conf"
+    val path = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
     val conf = ConfigLoader.load(path, None)
     assert(conf != null)
   }

@@ -56,30 +56,38 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
       val succeed = r.forall(_.succeed)
       currentMergeSize += 1
       if(!succeed || currentMergeSize == finalMergeSize){
-        val subject =
-          if (succeed) {
-            s"[${mailConf.subjectPrefix}][$serverInfo] $componentName execute succeed"
-          } else {
-            s"[${mailConf.subjectPrefix}][WARN!!][$serverInfo] $componentName execute failed"
+        try {
+          val subject =
+            if (succeed) {
+              s"[${mailConf.subjectPrefix}][$serverInfo] $componentName execute succeed"
+            } else {
+              s"[${mailConf.subjectPrefix}][WARN!!][$serverInfo] $componentName execute failed"
+            }
+          val now = DateTime.now
+          val body = s"$componentName start at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, finished at ${now.toString("yyyy-MM-dd HH:mm:ss")}, total elapsed time = ${now.getMillis - startedAt.getMillis}ms.\n${assemblyResults.mkString("\n")}"
+          logger.info(s"mail body:\n$body")
+          //send mail
+          val mailResp = MailAPI.sendMail(mailConf.apiUrl, subject, body, mailConf.toList)
+          logger.info(s"The resp of sending mail [$subject] is [$mailResp]")
+          //send wechat message
+          if (wechatConf.enable) {
+            val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
+            logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
           }
-        val now = DateTime.now
-        val body = s"$componentName start at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, finished at ${now.toString("yyyy-MM-dd HH:mm:ss")}, total elapsed time = ${now.getMillis - startedAt.getMillis}ms.\n${assemblyResults.mkString("\n")}"
-        logger.info(s"mail body:\n$body")
-        //send mail
-        val mailResp = MailAPI.sendMail(mailConf.apiUrl, subject, body, mailConf.toList)
-        logger.info(s"The resp of sending mail [$subject] is [$mailResp]")
-        //send wechat message
-        if (wechatConf.enable) {
-          val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
-          logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
+
+          logger.info(s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms")
+
+        } catch{
+          case e: Exception =>
+            val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
+            val err = s"${e.toString}\n$lstTrace"
+            logger.error(err)
+        } finally {
+          logger.info("Stop SparkContext...")
+          inject[SparkContext].stop()
+          logger.info("Terminate actor system...")
+          context.system.terminate()
         }
-
-        logger.info(s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms")
-
-        logger.info("Stop SparkContext...")
-        inject[SparkContext].stop()
-        logger.info("Terminate actor system...")
-        context.system.terminate()
       } else {
         logger.info(s"waiting for up to finalMergeSize, then send notification. currentMergeSize = $currentMergeSize, finalMergeSize = $finalMergeSize")
       }
