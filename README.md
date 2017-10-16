@@ -15,7 +15,8 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 其中System（系统）、Application（应用）、Module（模块）都可以独立执行。
 
 # V3.0.0
-使用akka和scaldi重构框架，支持并行的流程。
+使用akka和scaldi重构框架，支持并行的流程。<br/>
+支持Spark 2.1.1版本
 ## 主要特性
 1. 框架进程中执行的每个部件都共用一个SparkContext
 2. 通过配置文件可灵活配置执行流程，支持`并行流程`
