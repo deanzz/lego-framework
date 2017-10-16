@@ -189,8 +189,9 @@ sample/s1/conf/application.conf
 sample/s1/s1.ap1/conf/application.conf 
 
 ### 部署框架
-部署实例sample概览：<br/>
-具体可参加sample/s1目录下内容。<br/>
+##### sample/s1目录为一个部署完成的实例，使用者需修改其中与路径相关的配置，即可运行。
+
+部署实例sample/s1概览：<br/>
 ![部署目录](https://raw.githubusercontent.com/deanzz/lego-framework/master/sample/s1.png)
 1. 严格按照层级关系（System 》Application 》Module）的目录结构进行部署<br/>
 比如，system s1下配置了application s1.ap1和s1.ap2；application s1.ap1下又配置了module s1.ap1.m1和sq.ap1.m2；<br/>
