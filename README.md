@@ -276,12 +276,12 @@ sample/s1/s1.ap1/conf/application.conf
 ## 预警
 目前只支持通过一种内部的http邮件API或http微信API发送预警信息，下一步框架会提供更灵活的配置，可以向自定义邮件或微信API发送预警信息。
 ### 邮件(待完善)
-####执行成功
-#####主题
+#### 执行成功
+##### 主题
 ```text
 [ProjectName][deanzhang@127.0.0.1] System[s1] execute succeed
 ```
-#####内容
+##### 内容
 ```text
 System[s1] start at 2017-10-16 16:46:15, finished at 2017-10-16 16:46:23, total elapsed time = 7586ms.
 s1.ap1.m1.a1: execute succeed. started at 2017-10-16 16:46:15; finished at 2017-10-16 16:46:16, elapsed time = 284ms. 
@@ -304,12 +304,12 @@ s1.ap1.m1.1.a1: execute succeed. started at 2017-10-16 16:46:18; finished at 201
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
 ...
 ```
-####执行失败
-#####主题
+#### 执行失败
+##### 主题
 ```text
 [ProjectName][WARN!!][deanzhang@127.0.0.1] System[s1] execute failed
 ```
-#####内容
+##### 内容
 ```text
 System[s1] start at 2017-10-16 17:00:18, finished at 2017-10-16 17:00:19, total elapsed time = 1763ms.
 s1.ap1.m1.a1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:18, elapsed time = 278ms. 
