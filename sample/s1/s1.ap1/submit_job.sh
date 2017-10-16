@@ -8,7 +8,7 @@ fi
 
 # get deploy mode by input parameter
 DEFAULT_DEPLOY_MODE=client
-# client or cluster
+# client or cluster or local
 INPUT_DEPLOY_MODE=$1
 DEPLOY_MODE=${INPUT_DEPLOY_MODE:-$DEFAULT_DEPLOY_MODE}
 
@@ -62,4 +62,13 @@ SUBMIT_DIR=$ROOT_DIR
 if [ "$DEPLOY_MODE" = "cluster" ]; then
 	SUBMIT_DIR=$HDFS_ROOT_DIR
 fi
-spark-submit --conf spark.app.name=$MODEL_NAME --jars $(find $ROOT_DIR -type f -name "*.jar" -not -name "lego-core*" | awk -F/ '{ $0=$0 ; print $NF","$0}' | sort -u -t, -k1,1 | cut -d"," -f2 | xargs echo | tr ' ' ',') --class cn.dean.lego.core.Launcher --master local $SPARK_PARAMETERS "$SUBMIT_DIR/$LEGO_CORE_JAR" $SUBMIT_DIR/conf/application.conf
+
+MASTER_PARAM=""
+if [ "$DEPLOY_MODE" = "cluster" ]; then
+	MASTER_PARAM="--master yarn --deploy-mode cluster"
+elif [ "$DEPLOY_MODE" = "client" ]; then
+    MASTER_PARAM="--master yarn --deploy-mode client"
+else
+    MASTER_PARAM="--master local"
+fi
+spark-submit --conf spark.app.name=$MODEL_NAME --jars $(find $ROOT_DIR -type f -name "*.jar" -not -name "lego-core*" | awk -F/ '{ $0=$0 ; print $NF","$0}' | sort -u -t, -k1,1 | cut -d"," -f2 | xargs echo | tr ' ' ',') --class cn.dean.lego.core.Launcher $MASTER_PARAM $SPARK_PARAMETERS "$SUBMIT_DIR/$LEGO_CORE_JAR" $SUBMIT_DIR/conf/application.conf

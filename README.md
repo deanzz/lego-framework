@@ -109,7 +109,7 @@ trait PredictModelAssembly extends Component{
 ```
 
 ### 编写配置文件
-框架中配置解析使用https://github.com/typesafehub/config实现
+框架中配置解析使用https://github.com/typesafehub/config 实现
 #### 共通配置
 1. 配置类型<br/>
 system：标识该配置描述的是一个system（系统）<br/>
@@ -141,7 +141,6 @@ log.dir = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/log/"
 4. 邮件相关配置（待完善）
 5. 微信相关配置（待完善）
 #### 配置Module
-module的配置较system和application会有些许不同。
 1. assemblies-dir<br/>
 assembly的存放目录的绝对路径，该参数用于local运行模式下，查找存放assembly jar包的目录
 2. assemblies<br/>
@@ -274,3 +273,59 @@ sample/s1/s1.ap1/conf/application.conf
     HDFS_MODELS_ROOT_DIR=hdfs://hadoop1:8020/models/
     ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMETERS" $HDFS_MODELS_ROOT_DIR 
     ```
+## 预警
+目前只支持通过一种内部的http邮件API或http微信API发送预警信息，下一步框架会提供更灵活的配置，可以向自定义邮件或微信API发送预警信息。
+### 邮件(待完善)
+####执行成功
+#####主题
+```text
+[ProjectName][deanzhang@127.0.0.1] System[s1] execute succeed
+```
+#####内容
+```text
+System[s1] start at 2017-10-16 16:46:15, finished at 2017-10-16 16:46:23, total elapsed time = 7586ms.
+s1.ap1.m1.a1: execute succeed. started at 2017-10-16 16:46:15; finished at 2017-10-16 16:46:16, elapsed time = 284ms. 
+None
+s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 16:46:16; finished at 2017-10-16 16:46:17, elapsed time = 1013ms. 
+a#b#c
+s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 103ms. 
+a#b#c
+s1.ap1.m1.a2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 155ms. 
+a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a3: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 159ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a4: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 138ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a4.1: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 166ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a4.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:18, elapsed time = 136ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.1.a1: execute succeed. started at 2017-10-16 16:46:18; finished at 2017-10-16 16:46:18, elapsed time = 231ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+...
+```
+####执行失败
+#####主题
+```text
+[ProjectName][WARN!!][deanzhang@127.0.0.1] System[s1] execute failed
+```
+#####内容
+```text
+System[s1] start at 2017-10-16 17:00:18, finished at 2017-10-16 17:00:19, total elapsed time = 1763ms.
+s1.ap1.m1.a1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:18, elapsed time = 278ms. 
+None
+s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:19, elapsed time = 879ms. 
+a#b#c
+s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 68ms. 
+a#b#c
+s1.ap1.m1.a2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 156ms. 
+a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a3: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 158ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a4: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 135ms. 
+a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
+s1.ap1.m1.a4.1: execute failed!!!!! started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 4ms. 
+java.lang.Exception: Throw a test exception
+```
+
+### 微信(待完善)
