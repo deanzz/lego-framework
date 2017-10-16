@@ -28,10 +28,10 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 1. 进行Assembly（部件）的开发
 2. 通过编写配置文件，配置出自己喜欢的流程
 3. 按照框架的规则部署
-4. 按照启动脚本模板，修改不到5个参数，完成启动脚本开发
+4. 按照启动脚本模板，修改最多4个参数，完成启动脚本开发
 5. 执行启动脚本，执行任务流程
 
-###Assembly（部件）的开发
+### Assembly（部件）的开发
 1. 部件分为两类，数据清洗类和模型类
 2. 数据清洗类部件需要实现CleanerAssembly接口的clean和succeed方法
 3. 模型类部件需要实现PredictModelAssembly接口的predict和succeed方法
@@ -108,9 +108,9 @@ trait PredictModelAssembly extends Component{
 }
 ```
 
-###编写配置文件
+### 编写配置文件
 框架中配置解析使用https://github.com/typesafehub/config实现
-####共通配置
+#### 共通配置
 1. 配置类型<br/>
 system：标识该配置描述的是一个system（系统）<br/>
 application：标识该配置描述的是一个application（应用）<br/>
@@ -140,7 +140,7 @@ log.dir = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/log/"
 ```
 4. 邮件相关配置（待完善）
 5. 微信相关配置（待完善）
-####配置Module
+#### 配置Module
 module的配置较system和application会有些许不同。
 1. assemblies-dir<br/>
 assembly的存放目录的绝对路径，该参数用于local运行模式下，查找存放assembly jar包的目录
@@ -173,24 +173,28 @@ assembly的存放目录的绝对路径，该参数用于local运行模式下，�
 包含所有部件参数的一个数组，<br/>
 每个部件参数配置必须包含一个name字段，对应assemblies中的name字段，用于部件与其参数配置的关联，<br/>
 其他参数，使用者根据自己需求，随意配置。
-#####完整实例
+##### 完整实例
 参见sample/s1/s1.ap1/s1.ap1.m1/conf/application.conf
 
-####配置Application或System
+#### 配置Application或System
 1. parts<br/>
 包含所有下级结构（application或module）配置的数组，每个结构配置包含如下字段
     1. name：下级结构名称
     2. dir：下级结构所在目录
     3. index：下级结构的执行顺序，同assembly中index字段，同样可配置并行流程
     4. enable：标识该下级结构是否被执行，true为执行，false为不执行
-#####完整实例
+##### 完整实例
 参见
 sample/s1/conf/application.conf 
 或
 sample/s1/s1.ap1/conf/application.conf 
 
-###部署框架
+### 部署框架
+部署实例sample概览：<br/>
+具体可参加sample/s1目录下内容。
+![部署目录](https://raw.githubusercontent.com/deanzz/lego-framework/master/sample/s1.png)
 1. 严格按照层级关系（System 》Application 》Module）的目录结构进行部署<br/>
+下面图片为sample部署后的目录，
 比如，system s1下配置了application s1.ap1和s1.ap2；application s1.ap1下又配置了module s1.ap1.m1和sq.ap1.m2；<br/>
 则s1.ap1.m1和sq.ap1.m2目录在s1.ap1下，s1.ap1和s1.ap2目录在s1下。<br/>
 目录结构如下：
@@ -202,8 +206,72 @@ sample/s1/s1.ap1/conf/application.conf
     |-s1.ap2|
             |-...
 ```
-2.     
-        
-        
+2. module目录包含如下内容
+    1. assemblies文件夹：放置模块需要执行的所有部件jar包
+    2. conf文件夹：放置模块需要的配置文件application.conf
+    3. lego-core-assembly-x.x.x.jar：框架的jar文件，包含框架的主要处理逻辑，若想模块单独运行需添加该jar包
+    4. submit_job.sh：提交任务的脚本
+    5. start.sh：启动脚本，其中会调用submit_job.sh
+3. application目录包含如下内容
+    1. conf文件夹：放置应用需要的配置文件application.conf
+    2. lego-core-assembly-x.x.x.jar：框架的jar文件，包含框架的主要处理逻辑，若想应用单独运行需添加该jar包
+    3. submit_job.sh：提交任务的脚本
+    4. start.sh：启动脚本，其中会调用submit_job.sh
+    5. 其下的所有module的目录
+4. system目录包含如下内容
+    1. conf文件夹：放置系统需要的配置文件application.conf
+    2. lego-core-assembly-x.x.x.jar：框架的jar文件，包含框架的主要处理逻辑
+    3. submit_job.sh：提交任务的脚本
+    4. start.sh：启动脚本，其中会调用submit_job.sh
+    5. 其下的所有application的目录
+5. 提交任务脚本submit_job.sh<br/>
+    该文件一般情况不做任何修改，用start.sh传入正确的参数直接调用    
+    1. 执行模板：<br/>
+    ./submit_job.sh {deploy_mode(client/cluster)} {local_root_dir} {spark_parameters} {hdfs_models_root_dir}
+    2. 参数说明：
+        1. deploy_mode<br/>
+        运行模式，有两个可选值：<br/>
+        local：表示以local模式提交spark任务<br/>
+        client：表示以yarn-client模式提交spark任务<br/>
+        cluster：表示以yarn-cluster模式提交spark任务
+        2. local_root_dir<br/>
+        本地的模型根目录，填绝对路径
+        3. spark_parameters<br/>
+        spark的参数，主要是spark的性能参数，<br/>
+        所有参数需要用双引号括起来，<br/>
+        比如 "--executor-memory 4G --conf spark.shuffle.consolidateFiles=true --conf spark.rdd.compress=true"
+        4. hdfs_models_root_dir<br/>
+        hdfs中模型的根目录的父级目录，该参数只针对cluster模式，client模式填写无效<br/>
+        比如规定所有需要使用yarn-cluster模式运行的模型，都要将模型存入hdfs://hadoop1:8020/models目录，那么该参数就填hdfs://hadoop1:8020/models，<br/>
+        比如本地模型目录为dove_pred，那么模型上传到hdfs后目录会在hdfs://hadoop1:8020/models/dove_pred
+6. 启动脚本start.sh<br/>
+    1. local模式
+    ```bash
+    #!/bin/bash
+    
+    DEPLOY_MODE=local
+    LOCAL_ROOT_DIR=/Users/deanzhang/work/code/github/lego-framework/sample/s1
+    SPARK_PARAMTERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
+    ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMTERS"
+    ```
 
+    2. client模式
+    ```bash
+    #!/bin/bash
 
+    DEPLOY_MODE=client
+    LOCAL_ROOT_DIR=/Users/deanzhang/work/code/github/lego-framework/sample/s1
+    SPARK_PARAMTERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
+    ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMTERS"
+    ```
+    
+    3. cluster模式
+    ```bash
+    #!/bin/bash
+    
+    DEPLOY_MODE=cluster
+    LOCAL_ROOT_DIR=/home/sa/app/models/appB
+    SPARK_PARAMETERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
+    HDFS_MODELS_ROOT_DIR=hdfs://hadoop1:8020/models/
+    ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMETERS" $HDFS_MODELS_ROOT_DIR 
+    ```
