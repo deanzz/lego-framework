@@ -13,7 +13,7 @@ trait PredictModelAssembly extends Component{
     *
     * @param sc SparkContext object on framework
     * @param config Config object, can get assembly parameters by config
-    * @param prevStepRDD Data set RDD[String] of previous job
+    * @param prevStepRDD Data set Map of previous job
     * @return Data set RDD[String] of current job
     */
   def accuracy(sc: SparkContext, config: Config,
