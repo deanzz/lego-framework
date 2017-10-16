@@ -190,7 +190,7 @@ sample/s1/conf/application.conf
 sample/s1/s1.ap1/conf/application.conf 
 
 ### 部署框架
-##### sample/s1目录为一个部署完成的实例，使用者需修改其中与路径相关的配置，即可运行。
+##### sample/s1目录为一个部署完成的实例，使用者需修改其中与路径相关的配置，即整体替换s1目录下"/Users/deanzhang/work/code/github"为你本地lego-framework的目录，即可运行。
 
 部署实例sample/s1概览：<br/>
 ![部署目录](https://raw.githubusercontent.com/deanzz/lego-framework/master/sample/s1.png)
