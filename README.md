@@ -227,7 +227,9 @@ sample/s1/s1.ap1/conf/application.conf
 5. 提交任务脚本submit_job.sh<br/>
     该文件一般情况不做任何修改，用start.sh传入正确的参数直接调用    
     1. 执行模板：<br/>
+    ```bash
     ./submit_job.sh {deploy_mode(client/cluster)} {local_root_dir} {spark_parameters} {hdfs_models_root_dir}
+    ```
     2. 参数说明：
         1. deploy_mode<br/>
         运行模式，有两个可选值：<br/>
