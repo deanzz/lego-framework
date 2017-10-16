@@ -20,7 +20,7 @@ object HttpClient {
     val json =
       """
         |{
-        | "email_receiver":"xnzhang@jointwisdom.cn",
+        | "email_receiver":"xnzhang@sample.cn",
         | "email_subject":"test warning email API1",
         | "email_content":"test warning email API2"
         |}
