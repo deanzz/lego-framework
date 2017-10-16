@@ -118,7 +118,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
         val startLog = s"started at ${start.toString("yyyy-MM-dd HH:mm:ss")}; "
         logger.info(s"${Thread.currentThread().getName}: $name - $startLog")
         val assemblyDir = node.info.structConf.getString("assemblies-dir")
-        val jarName = s"$assemblyDir/${node.info.structConf.getString("jar-name")}"
+        val jarName = s"${if(assemblyDir.isEmpty) "" else assemblyDir + "/"}${node.info.structConf.getString("jar-name")}"
         val className = node.info.structConf.getString("class-name")
         val assembly = ComponentLoader.load(jarName, className)
         val lastRdd = lastResult.map(_.result).foldLeft(Option(Map.empty[String, RDD[String]])) {

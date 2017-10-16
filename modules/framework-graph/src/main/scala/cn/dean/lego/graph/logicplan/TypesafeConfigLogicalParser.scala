@@ -38,7 +38,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def extractNodes(config: Config): Seq[GraphNode[NodeProp]] = {
     val confType = config.getString("type")
     //获取全局上下文参数
-    val contextParameters: Seq[KeyValue] = config.getConfigList("context.parameters").asScala.map(KeyValue.apply)
+    val contextParameters: Seq[KeyValue] = Try(config.getConfigList("context.parameters").asScala).getOrElse(Seq.empty[Config]).map(KeyValue.apply)
     val nodeMap = mutable.Map.empty[Long, Seq[GraphNode[NodeProp]]]
     val rootNodes = confType match {
       case "system" =>
@@ -207,7 +207,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
   private def getNodeProps(conf: Config): Seq[NodeProp] = {
     val isModule = Try(conf.getConfigList("assemblies") != null).getOrElse(false)
     if (isModule) {
-      val assemblyDir = conf.getString("assemblies-dir")
+      val assemblyDir = Try(conf.getString("assemblies-dir")).getOrElse("")
       val assemblies = conf.getConfigList("assemblies").asScala.filter(c => c.getBoolean("enable")).map(_.withValue("assemblies-dir", ConfigValueFactory.fromAnyRef(assemblyDir))).sortWith {
         case (c1, c2) =>
           val a1 = c1.getString("index").split(".").map(_.toInt)
