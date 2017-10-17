@@ -5,13 +5,13 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.javadsl.RunnableGraph
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink, Source, ZipWith}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL /*, Merge*/ , Sink, Source, ZipWith}
 import cn.dean.lego.common.exceptions.FlowRunFailedException
 import cn.dean.lego.common.loader.ComponentLoader
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.graph.models.{GraphNode, NodeProp}
-import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, FinalMergeSize, PlanStart}
+import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog /*, FinalMergeSize*/ , PlanStart}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.joda.time.DateTime
@@ -81,10 +81,17 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
 
         val endNodes = nodes.filter(_.outputs.isEmpty)
         if (endNodes.length > 1) {
-          notifyActor ! FinalMergeSize(endNodes.length)
+          /*notifyActor ! FinalMergeSize(endNodes.length)
           val merge = builder.add(Merge[Result](endNodes.length))
           merge.out ~> sink
           val inlets = merge.inSeq.map(new NodeIn(_))
+          */
+          val zipWith = builder.add(getZipWithNode(endNodes.length))
+          zipWith.out ~> sink
+          val inlets = zipWith.inlets.map {
+            n =>
+              new NodeIn(n.as[Result])
+          }
           endNodes.foreach {
             n =>
               val (_, flowOut) = flowMap(n.id)
@@ -118,7 +125,7 @@ class AkkaPhysicalParser(implicit injector: Injector) extends GraphPhysicalParse
         val startLog = s"started at ${start.toString("yyyy-MM-dd HH:mm:ss")}; "
         logger.info(s"${Thread.currentThread().getName}: $name - $startLog")
         val assemblyDir = node.info.structConf.getString("assemblies-dir")
-        val jarName = s"${if(assemblyDir.isEmpty) "" else assemblyDir + "/"}${node.info.structConf.getString("jar-name")}"
+        val jarName = s"${if (assemblyDir.isEmpty) "" else assemblyDir + "/"}${node.info.structConf.getString("jar-name")}"
         val className = node.info.structConf.getString("class-name")
         val assembly = ComponentLoader.load(jarName, className)
         val lastRdd = lastResult.map(_.result).foldLeft(Option(Map.empty[String, RDD[String]])) {

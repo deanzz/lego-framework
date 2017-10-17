@@ -8,7 +8,7 @@ import cn.dean.lego.common.config.{MailConf, WechatConf}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.common.utils.{MailAPI, WechatAPI}
-import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, FinalMergeSize, PlanStart}
+import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog /*, FinalMergeSize*/ , PlanStart}
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.joda.time.DateTime
@@ -37,8 +37,8 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
   //应用名称
   private val appName = conf.getString("name")
   private var startedAt: DateTime = DateTime.now()
-  private var finalMergeSize = 1
-  private var currentMergeSize = 0
+  /*private var finalMergeSize = 1
+  private var currentMergeSize = 0*/
   private val assemblyResults = ListBuffer.empty[String]
 
   //应用类型，system, application or module
@@ -54,43 +54,43 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case r: Seq[ComponentResult] =>
       logger.info(s"NotifyActor.r = $r")
       val succeed = r.forall(_.succeed)
-      currentMergeSize += 1
-      if(!succeed || currentMergeSize == finalMergeSize){
-        try {
-          val subject =
-            if (succeed) {
-              s"[${mailConf.subjectPrefix}][$serverInfo] $componentName execute succeed"
-            } else {
-              s"[${mailConf.subjectPrefix}][WARN!!][$serverInfo] $componentName execute failed"
-            }
-          val now = DateTime.now
-          val body = s"$componentName start at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, finished at ${now.toString("yyyy-MM-dd HH:mm:ss")}, total elapsed time = ${now.getMillis - startedAt.getMillis}ms.\n${assemblyResults.mkString("\n")}"
-          logger.info(s"mail body:\n$body")
-          //send mail
-          val mailResp = MailAPI.sendMail(mailConf.apiUrl, subject, body, mailConf.toList)
-          logger.info(s"The resp of sending mail [$subject] is [$mailResp]")
-          //send wechat message
-          if (wechatConf.enable) {
-            val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
-            logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
+      /*currentMergeSize += 1
+      if(!succeed || currentMergeSize == finalMergeSize){*/
+      try {
+        val subject =
+          if (succeed) {
+            s"[${mailConf.subjectPrefix}][$serverInfo] $componentName execute succeed"
+          } else {
+            s"[${mailConf.subjectPrefix}][WARN!!][$serverInfo] $componentName execute failed"
           }
-
-          logger.info(s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms")
-
-        } catch{
-          case e: Exception =>
-            val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
-            val err = s"${e.toString}\n$lstTrace"
-            logger.error(err)
-        } finally {
-          logger.info("Stop SparkContext...")
-          inject[SparkContext].stop()
-          logger.info("Terminate actor system...")
-          context.system.terminate()
+        val now = DateTime.now
+        val body = s"$componentName start at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, finished at ${now.toString("yyyy-MM-dd HH:mm:ss")}, total elapsed time = ${now.getMillis - startedAt.getMillis}ms.\n${assemblyResults.mkString("\n")}"
+        logger.info(s"mail body:\n$body")
+        //send mail
+        val mailResp = MailAPI.sendMail(mailConf.apiUrl, subject, body, mailConf.toList)
+        logger.info(s"The resp of sending mail [$subject] is [$mailResp]")
+        //send wechat message
+        if (wechatConf.enable) {
+          val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
+          logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
         }
-      } else {
-        logger.info(s"waiting for up to finalMergeSize, then send notification. currentMergeSize = $currentMergeSize, finalMergeSize = $finalMergeSize")
+
+        logger.info(s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms")
+
+      } catch {
+        case e: Exception =>
+          val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
+          val err = s"${e.toString}\n$lstTrace"
+          logger.error(err)
+      } finally {
+        logger.info("Stop SparkContext...")
+        inject[SparkContext].stop()
+        logger.info("Terminate actor system...")
+        context.system.terminate()
       }
+    /*} else {
+      logger.info(s"waiting for up to finalMergeSize, then send notification. currentMergeSize = $currentMergeSize, finalMergeSize = $finalMergeSize")
+    }*/
 
     case PlanStart(startTime) =>
       startedAt = startTime
@@ -98,8 +98,8 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case AddResultLog(log) =>
       assemblyResults += log
 
-    case FinalMergeSize(size) =>
-      finalMergeSize = size
+    /*case FinalMergeSize(size) =>
+      finalMergeSize = size*/
   }
 }
 
@@ -109,7 +109,7 @@ object NotifyActor {
 
   case class AddResultLog(log: String)
 
-  case class FinalMergeSize(size: Int)
+  //case class FinalMergeSize(size: Int)
 
 }
 
