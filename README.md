@@ -37,7 +37,12 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 2. 数据清洗类部件需要实现CleanerAssembly接口的clean和succeed方法
 3. 模型类部件需要实现PredictModelAssembly接口的predict和succeed方法
 4. 两个接口中的clean和predict方法是部件的处理逻辑，succeed方法是部件的执行状态，框架需要通过该方法判断执行状态
-5. 部件开发完成后，使用sbt assembly命令生成jar文件
+5. clean和predict方法包含3个输入参数<br/>
+    1. sc：执行Spark任务所需的SparkContext
+    2. config：当前这个部件的参数配置，对应部件配置文件conf/application.conf中parameters数组中的一个节点
+    3. prevStepRDD：包含上一步执行结果的键值对，因为上一步可能是并行流程，所以有可能会传来n个结果，使用上一步部件的name提取结果
+6. clean和predict方法的返回参数是当前部件的执行结果，会传给下一步的部件
+7. 部件开发完成后，使用sbt assembly命令生成jar文件
 
 CleanerAssembly接口:
 ```scala
