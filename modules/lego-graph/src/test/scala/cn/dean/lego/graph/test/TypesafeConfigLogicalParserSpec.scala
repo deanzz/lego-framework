@@ -11,7 +11,7 @@ import scaldi.Injectable
   * Created by deanzhang on 2017/8/20.
   */
 class TypesafeConfigLogicalParserSpec extends FlatSpec {
-
+/*
   //val path = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/s1.ap1/s1.ap1.m1/conf/application.conf"
   //val path = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/s1.ap1/conf/application.conf"
   val path = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
@@ -39,6 +39,6 @@ class TypesafeConfigLogicalParserSpec extends FlatSpec {
     val nodes = logicalParser.parse(conf)
     nodes.foreach(println)
     //assert(nodes.length === 33)
-  }
+  }*/
 
 }

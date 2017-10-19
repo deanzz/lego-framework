@@ -5,6 +5,7 @@ import cn.dean.lego.common.config.{ConfigLoader, KeyValue}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.models.NodeType
 import cn.dean.lego.graph.models.{GraphNode, NodeProp}
+import org.apache.spark.SparkContext
 import scaldi.Injectable.inject
 import scaldi.Injector
 
@@ -235,7 +236,7 @@ class TypesafeConfigLogicalParser(implicit injector: Injector) extends GraphLogi
         c =>
           val dir = c.getString("dir")
           val confPath = s"$dir/conf/application.conf"
-          val newConf = ConfigLoader.load(confPath, None)
+          val newConf = ConfigLoader.load(confPath, Some(inject[SparkContext]))
           val idx = c.getString("index")
           val name = c.getString("name")
           NodeProp(idx, name, nodeType, newConf)

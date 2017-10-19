@@ -12,7 +12,7 @@ import org.scalatest.FlatSpec
 
 class AkkaPhysicalParserSpec extends FlatSpec{
 
-  private val sysConf = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
+  /*private val sysConf = "/Users/deanzhang/work/code/github/lego-framework/sample/s1/conf/application.conf"
   implicit val injector = new GraphModule(sysConf)
 
   private val physicalParser = inject[AkkaPhysicalParser]
@@ -28,7 +28,7 @@ class AkkaPhysicalParserSpec extends FlatSpec{
     physicalParser.run(inject[SparkContext], nodes)
 
     //assert(nodes.length === 42)
-  }
+  }*/
 
   /*it should "test succeed" in {
     physicalParser.test()

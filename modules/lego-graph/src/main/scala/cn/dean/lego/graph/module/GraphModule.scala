@@ -16,8 +16,8 @@ class GraphModule(configPath: String) extends Module {
 
   bind[SparkConf] to new SparkConf()
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    .setMaster("local")
-    .setAppName("legoV3+")
+    //.setMaster("local")
+    //.setAppName("legoV3+")
 
   bind[SparkContext] to SparkContext.getOrCreate(inject[SparkConf])
 
