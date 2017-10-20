@@ -2,13 +2,13 @@ package cn.dean.lego.graph.physicalplan
 
 import java.net.InetAddress
 
-import akka.actor.Actor
+import akka.actor.{Actor, Status}
 import cn.dean.lego.common.{TYPE_APPLICATION, TYPE_MODULE, TYPE_SYSTEM}
 import cn.dean.lego.common.config.{MailConf, WechatConf}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.common.utils.{MailAPI, WechatAPI}
-import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog /*, FinalMergeSize*/ , PlanStart}
+import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, NotifyCompleted, PlanStart}
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.joda.time.DateTime
@@ -54,8 +54,6 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case r: Seq[ComponentResult] =>
       logger.info(s"NotifyActor.r = $r")
       val succeed = r.forall(_.succeed)
-      /*currentMergeSize += 1
-      if(!succeed || currentMergeSize == finalMergeSize){*/
       try {
         val subject =
           if (succeed) {
@@ -74,23 +72,21 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
           val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
           logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
         }
-
-        logger.info(s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms")
-
+        val msg = s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms"
+        logger.info(msg)
+        sender() ! msg
       } catch {
         case e: Exception =>
           val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
           val err = s"${e.toString}\n$lstTrace"
           logger.error(err)
+          sender() ! err
       } finally {
         logger.info("Stop SparkContext...")
         inject[SparkContext].stop()
         logger.info("Terminate actor system...")
         context.system.terminate()
       }
-    /*} else {
-      logger.info(s"waiting for up to finalMergeSize, then send notification. currentMergeSize = $currentMergeSize, finalMergeSize = $finalMergeSize")
-    }*/
 
     case PlanStart(startTime) =>
       startedAt = startTime
@@ -98,8 +94,15 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case AddResultLog(log) =>
       assemblyResults += log
 
-    /*case FinalMergeSize(size) =>
-      finalMergeSize = size*/
+    case NotifyCompleted =>
+      logger.info("NotifyCompleted")
+
+    case Status.Failure(e) =>
+      val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
+      val err = s"${e.toString}\n$lstTrace"
+      logger.error(s"NotifyActor: $err")
+
+    case unknown => logger.error(s"PhysicalRunner got unknown message [$unknown]")
   }
 }
 
@@ -109,7 +112,7 @@ object NotifyActor {
 
   case class AddResultLog(log: String)
 
-  //case class FinalMergeSize(size: Int)
+  case object NotifyCompleted
 
 }
 

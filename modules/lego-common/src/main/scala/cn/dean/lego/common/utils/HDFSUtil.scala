@@ -43,7 +43,7 @@ object HDFSUtil {
 
   //@tailrec
   def appendFile(path: String, content: String): Boolean = {
-    var bfWriter: BufferedWriter = null
+    /*var bfWriter: BufferedWriter = null
     var writer: OutputStreamWriter = null
     var out: FSDataOutputStream = null
     try {
@@ -63,7 +63,8 @@ object HDFSUtil {
       if (null != bfWriter) bfWriter.close()
       if (null != writer) writer.close()
       if (null != out) out.close()
-    }
+    }*/
+    true
   }
 
   /**

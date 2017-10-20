@@ -17,6 +17,7 @@ object Launcher {
 
   /**
     * 入口函数
+    *
     * @param args 入口函数参数，目前有一个参数，配置文件绝对路径（local/hdfs）
     */
   def main(args: Array[String]): Unit = {
@@ -28,13 +29,12 @@ object Launcher {
         "conf/application.conf"
       }
     implicit val injector = new GraphModule(configPath)
-    val logicalParser = inject[TypesafeConfigLogicalParser]
-    val logicalNodes = logicalParser.parse(inject[Config])
-    val physicalParser = inject[AkkaPhysicalParser]
     val logger = inject[Logger]
-    val sc = inject[SparkContext]
     Try {
-      physicalParser.run(sc, logicalNodes)
+      val logicalParser = inject[TypesafeConfigLogicalParser]
+      val logicalNodes = logicalParser.parse(inject[Config])
+      val physicalParser = inject[AkkaPhysicalParser]
+      physicalParser.run(inject[SparkContext], logicalNodes)
     } match {
       case Success(res) => res
       case Failure(e) =>
