@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import cn.dean.lego.common.config.ConfigLoader
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
-import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, NotifyActor}
+import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, NotifyActor, PhysicalRunner}
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import scaldi.Module
@@ -21,8 +21,6 @@ class GraphModule(configPath: String) extends Module {
 
   bind[SparkContext] to SparkContext.getOrCreate(inject[SparkConf])
 
-  //binding toProvider SparkContext.getOrCreate(inject[SparkConf])
-
   bind[Config] to ConfigLoader.load(inject[SparkContext], configPath)
 
   bind[Logger] to new Logger
@@ -34,5 +32,7 @@ class GraphModule(configPath: String) extends Module {
   bind[TypesafeConfigLogicalParser] to new TypesafeConfigLogicalParser
 
   bind[AkkaPhysicalParser] to new AkkaPhysicalParser
+
+  bind[PhysicalRunner] to new PhysicalRunner
 
 }

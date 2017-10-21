@@ -2,13 +2,13 @@ package cn.dean.lego.graph.physicalplan
 
 import java.net.InetAddress
 
-import akka.actor.{Actor, Status}
+import akka.actor.Actor
 import cn.dean.lego.common.{TYPE_APPLICATION, TYPE_MODULE, TYPE_SYSTEM}
 import cn.dean.lego.common.config.{MailConf, WechatConf}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.common.utils.{MailAPI, WechatAPI}
-import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, NotifyCompleted, PlanStart}
+import cn.dean.lego.graph.physicalplan.NotifyActor.{AddResultLog, PlanStart}
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import org.joda.time.DateTime
@@ -72,15 +72,11 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
           val wechatResp = WechatAPI.send(wechatConf.apiUrl, wechatConf.group, wechatConf.app, componentName, serverInfo, body, succeed)
           logger.info(s"The resp of sending wechat [$subject] is [$wechatResp]")
         }
-        val msg = s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms"
-        logger.info(msg)
-        sender() ! msg
       } catch {
         case e: Exception =>
           val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
           val err = s"${e.toString}\n$lstTrace"
           logger.error(err)
-          sender() ! err
       } finally {
         logger.info("Stop SparkContext...")
         inject[SparkContext].stop()
@@ -94,14 +90,6 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case AddResultLog(log) =>
       assemblyResults += log
 
-    case NotifyCompleted =>
-      logger.info("NotifyCompleted")
-
-    case Status.Failure(e) =>
-      val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
-      val err = s"${e.toString}\n$lstTrace"
-      logger.error(s"NotifyActor: $err")
-
     case unknown => logger.error(s"PhysicalRunner got unknown message [$unknown]")
   }
 }
@@ -111,8 +99,6 @@ object NotifyActor {
   case class PlanStart(startTime: DateTime)
 
   case class AddResultLog(log: String)
-
-  case object NotifyCompleted
 
 }
 

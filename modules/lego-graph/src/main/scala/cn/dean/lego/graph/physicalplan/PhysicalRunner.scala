@@ -5,22 +5,22 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
 import cn.dean.lego.graph.models.{GraphNode, NodeProp}
+import cn.dean.lego.graph.physicalplan.NotifyActor.PlanStart
 import cn.dean.lego.graph.physicalplan.PhysicalRunner.Run
-import org.apache.spark.SparkContext
-import scaldi.Injectable.inject
-import scaldi.Injector
-import scaldi.akka.AkkaInjectable
+import org.joda.time.DateTime
+import scaldi.{Injectable, Injector}
 
-class PhysicalRunner(implicit injector: Injector) extends Actor with AkkaInjectable {
+import scala.util.{Failure, Success}
+
+class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable {
 
   private val physicalParser = inject[AkkaPhysicalParser]
   private val logger = inject[Logger]
-  private val notifyActor = injectActorRef[NotifyActor]
-  logger.info(s"Start up notifyActor [${notifyActor.path}]")
+  private val notifyActor = context.system.actorSelection("akka://lego-framework/user/notification")
+
   // implicit actor materializer
   private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system).withSupervisionStrategy(decider))
 
-  private var isStopped = false
   private val decider: Supervision.Decider = {
     case _: IllegalArgumentException =>
       Supervision.Restart
@@ -28,7 +28,8 @@ class PhysicalRunner(implicit injector: Injector) extends Actor with AkkaInjecta
       val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
       val err = s"Supervision.Decider: ${e.toString}\n$lstTrace"
       logger.error(err)
-      //val result = Seq(ComponentResult("got~exception", succeed = false, s"Got exception: $err", None))
+      //todo supervision获取的异常和下面future获取的异常是一样的吗？？
+      //val result = Seq(ComponentResult("Supervision exception", succeed = false, s"Got exception: $err", None))
       //notifyActor ! result
       Supervision.Stop
   }
@@ -36,21 +37,25 @@ class PhysicalRunner(implicit injector: Injector) extends Actor with AkkaInjecta
   override def receive: Receive = {
     case Run(nodes) =>
       val graph = physicalParser.parse(nodes)
-      val future = graph.run(materializer)
+      val startedAt = DateTime.now
+      logger.info(s"start running physicalPlan at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${startedAt.getMillis}")
+      notifyActor ! PlanStart(startedAt)
       import scala.concurrent.ExecutionContext.Implicits.global
-      future.onSuccess{
-        case result =>
-          logger.info("future.onSuccess")
+      val future = graph.run(materializer)
+      future.onComplete{
+        case Success(result) =>
+          val now = DateTime.now
+          val msg = s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms"
+          logger.info(msg)
           notifyActor ! result
-      }
-
-      future.onFailure{
-        case e =>
+          //sender() ! "Run succeed"
+        case Failure(e) =>
           val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
           val err = s"${e.toString}\n$lstTrace"
           logger.error(err)
-          val result = Seq(ComponentResult("got~exception", succeed = false, s"Got exception: $err", None))
+          val result = Seq(ComponentResult("future exception", succeed = false, s"Got exception: $err", None))
           notifyActor ! result
+          //sender() ! "Run failed"
       }
 
     case unknown => logger.error(s"PhysicalRunner got unknown message [$unknown]")

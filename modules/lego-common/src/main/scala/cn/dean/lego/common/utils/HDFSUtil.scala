@@ -43,28 +43,29 @@ object HDFSUtil {
 
   //@tailrec
   def appendFile(path: String, content: String): Boolean = {
-    /*var bfWriter: BufferedWriter = null
-    var writer: OutputStreamWriter = null
-    var out: FSDataOutputStream = null
-    try {
-      hadoopConf.setBoolean("dfs.support.append", true)
-      val hdfs = FileSystem.get(new URI(path), hadoopConf)
-      out = hdfs.append(new Path(path))
-      writer = new OutputStreamWriter(out)
-      bfWriter = new BufferedWriter(writer)
-      bfWriter.write(content)
-      true
-    } catch {
-      case _: FileNotFoundException =>
-        createNewFile(path)
-        appendFile(path, content)
-      case e: Exception => throw e
-    } finally {
-      if (null != bfWriter) bfWriter.close()
-      if (null != writer) writer.close()
-      if (null != out) out.close()
-    }*/
-    true
+    synchronized {
+      var bfWriter: BufferedWriter = null
+      var writer: OutputStreamWriter = null
+      var out: FSDataOutputStream = null
+      try {
+        hadoopConf.setBoolean("dfs.support.append", true)
+        val hdfs = FileSystem.get(new URI(path), hadoopConf)
+        out = hdfs.append(new Path(path))
+        writer = new OutputStreamWriter(out)
+        bfWriter = new BufferedWriter(writer)
+        bfWriter.write(content)
+        true
+      } catch {
+        case _: FileNotFoundException =>
+          createNewFile(path)
+          appendFile(path, content)
+        case e: Exception => throw e
+      } finally {
+        if (null != bfWriter) bfWriter.close()
+        if (null != writer) writer.close()
+        if (null != out) out.close()
+      }
+    }
   }
 
   /**
