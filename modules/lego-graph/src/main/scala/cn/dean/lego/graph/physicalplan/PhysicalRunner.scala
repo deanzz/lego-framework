@@ -13,6 +13,7 @@ import scaldi.{Injectable, Injector}
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
+//todo 下一步Runner会继承一个接口，提高可扩展性
 class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable {
 
   private val logger = inject[Logger]
