@@ -1,7 +1,6 @@
 lego-framework
 =
 
-# 整体概述
 乐高框架是一个基于Spark的模块化计算框架，每个模块都是一个实现了框架接口的独立jar包，通过配置文件将模块链接成一个流程图，框架会执行流程图，得到最终结果。<br/>
 
 框架名称之所以叫乐高，是因为乐高是目前市面上很牛逼的积木品牌，积木可以充分体现模块化的设计思路，所以使用lego命名新一代框架，彰显框架的高度模块化与灵活扩展。
@@ -25,6 +24,11 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 5. 流程中每个部件可以获取上一步部件的执行结果，再加工处理生成新的结果
 6. 支持local、yarn-client和yarn-cluster模式执行
 
+## 主要组成
+1. lego-common，包含一些共通的工具类和框架的接口规则
+2. lego-graph，包含逻辑执行计划的解析逻辑和物理执行计划的解析与运行逻辑
+3. lego-core，包含框架的运行入口
+
 ## 使用方法
 1. 进行Assembly（部件）的开发
 2. 通过编写配置文件，配置出自己喜欢的流程
@@ -33,7 +37,7 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 5. 执行启动脚本，执行任务流程
 
 ### Assembly（部件）的开发
-1. 部件分为两类，数据清洗类和模型类，Assembly的项目需要导入lego-common的jar包引入接口
+1. 部件分为两类，数据清洗类和模型类，Assembly的项目需要导入lego-common的package后的jar包引入接口
 2. 数据清洗类部件需要实现CleanerAssembly接口的clean和succeed方法
 3. 模型类部件需要实现PredictModelAssembly接口的predict和succeed方法
 4. 两个接口中的clean和predict方法是部件的处理逻辑，succeed方法是部件的执行状态，框架需要通过该方法判断执行状态
