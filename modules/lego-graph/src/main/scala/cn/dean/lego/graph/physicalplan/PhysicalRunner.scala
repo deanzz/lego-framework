@@ -1,20 +1,20 @@
 package cn.dean.lego.graph.physicalplan
 
 import akka.actor.Actor
+import akka.stream.javadsl.RunnableGraph
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.common.rules.ComponentResult
-import cn.dean.lego.graph.models.{GraphNode, NodeProp}
 import cn.dean.lego.graph.physicalplan.NotifyActor.PlanStart
 import cn.dean.lego.graph.physicalplan.PhysicalRunner.Run
 import org.joda.time.DateTime
 import scaldi.{Injectable, Injector}
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable {
 
-  private val physicalParser = inject[AkkaPhysicalParser]
   private val logger = inject[Logger]
   private val notifyActor = context.system.actorSelection("akka://lego-framework/user/notification")
 
@@ -35,8 +35,7 @@ class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable 
   }
 
   override def receive: Receive = {
-    case Run(nodes) =>
-      val graph = physicalParser.parse(nodes)
+    case Run(graph) =>
       val startedAt = DateTime.now
       logger.info(s"start running physicalPlan at ${startedAt.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${startedAt.getMillis}")
       notifyActor ! PlanStart(startedAt)
@@ -48,14 +47,12 @@ class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable 
           val msg = s"finished physicalPlan at ${now.toString("yyyy-MM-dd HH:mm:ss")}, currentTimeMillis = ${now.getMillis}, elapsed time = ${now.getMillis - startedAt.getMillis}ms"
           logger.info(msg)
           notifyActor ! result
-          //sender() ! "Run succeed"
         case Failure(e) =>
           val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
           val err = s"${e.toString}\n$lstTrace"
           logger.error(err)
           val result = Seq(ComponentResult("future exception", succeed = false, s"Got exception: $err", None))
           notifyActor ! result
-          //sender() ! "Run failed"
       }
 
     case unknown => logger.error(s"PhysicalRunner got unknown message [$unknown]")
@@ -63,5 +60,5 @@ class PhysicalRunner(implicit injector: Injector) extends Actor with Injectable 
 }
 
 object PhysicalRunner{
-  case class Run(nodes: Seq[GraphNode[NodeProp]])
+  case class Run(graph: RunnableGraph[Future[Seq[ComponentResult]]])
 }

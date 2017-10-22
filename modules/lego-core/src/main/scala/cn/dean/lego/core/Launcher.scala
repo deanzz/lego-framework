@@ -4,18 +4,16 @@ import akka.actor.ActorSystem
 import cn.dean.lego.common.log.Logger
 import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
 import cn.dean.lego.graph.module.GraphModule
-import cn.dean.lego.graph.physicalplan.PhysicalRunner
+import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, PhysicalRunner}
 import com.typesafe.config.Config
 import scaldi.Injectable.inject
 import scaldi.akka.AkkaInjectable._
 import akka.pattern.ask
 import akka.util.Timeout
 import cn.dean.lego.graph.physicalplan.PhysicalRunner.Run
-import org.apache.spark.SparkContext
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import scala.util.{Failure, Success, Try}
 
 /**
   * Created by deanzhang on 17/10/2.
@@ -41,14 +39,15 @@ object Launcher {
     try {
       val logicalParser = inject[TypesafeConfigLogicalParser]
       val logicalNodes = logicalParser.parse(inject[Config])
+      val physicalParser = inject[AkkaPhysicalParser]
+      val physicalGraph = physicalParser.parse(logicalNodes)
       val physicalRunner = injectActorRef[PhysicalRunner]("physical-runner")
       logger.info(s"Start up physicalRunnerActor [${physicalRunner.path}]")
-      implicit val timeout = Timeout(5.day)
-      val future = physicalRunner ? Run(logicalNodes)
-      Await.result(future, 5.day)
+      implicit val timeout: Timeout = Timeout(10.day)
+      val future = physicalRunner ? Run(physicalGraph)
+      //Await.result(future, 5.day)
+      Await.ready(future, 10.day)
     } catch {
-      case e: akka.pattern.AskTimeoutException =>
-        logger.warn(e.toString)
       case e: Exception =>
         val lstTrace = e.getStackTrace.map(_.toString).mkString("\n")
         val err = s"${e.toString}\n$lstTrace"

@@ -36,9 +36,7 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
 
   //应用名称
   private val appName = conf.getString("name")
-  private var startedAt: DateTime = DateTime.now()
-  /*private var finalMergeSize = 1
-  private var currentMergeSize = 0*/
+  private var startedAt: DateTime = _
   private val assemblyResults = ListBuffer.empty[String]
 
   //应用类型，system, application or module

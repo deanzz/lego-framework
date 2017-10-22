@@ -33,7 +33,7 @@ System（系统）、Application（应用）和Module（模块）通过配置得
 5. 执行启动脚本，执行任务流程
 
 ### Assembly（部件）的开发
-1. 部件分为两类，数据清洗类和模型类
+1. 部件分为两类，数据清洗类和模型类，Assembly的项目需要导入lego-common的jar包引入接口
 2. 数据清洗类部件需要实现CleanerAssembly接口的clean和succeed方法
 3. 模型类部件需要实现PredictModelAssembly接口的predict和succeed方法
 4. 两个接口中的clean和predict方法是部件的处理逻辑，succeed方法是部件的执行状态，框架需要通过该方法判断执行状态
@@ -162,13 +162,13 @@ assembly的存放目录的绝对路径，该参数用于local运行模式下，�
         assembly [d]的index = 2<br/>
         <br/>
         则b和c为一个并行流程，即整体执行流程图如下：
-        
+
                |-> b -|
                |      |
             a -        -> d
                |      |
                |-> c -|
-        
+
         具体可参加sample/s1中的实例（可本地执行）。
     3. type：部件的类型，cleaner为数据清洗类部件，model为模型类部件
     4. jar-name：部件jar文件的名称
@@ -190,9 +190,9 @@ assembly的存放目录的绝对路径，该参数用于local运行模式下，�
     4. enable：标识该下级结构是否被执行，true为执行，false为不执行
 ##### 完整实例
 参见
-sample/s1/conf/application.conf 
+sample/s1/conf/application.conf
 或
-sample/s1/s1.ap1/conf/application.conf 
+sample/s1/s1.ap1/conf/application.conf
 
 ### 部署框架
 ##### sample/s1目录为一个部署完成的实例，使用者需修改其中与路径相关的配置，即整体替换s1目录下"/Users/deanzhang/work/code/github"为你本地lego-framework的目录，即可运行。
@@ -204,7 +204,7 @@ sample/s1/s1.ap1/conf/application.conf
 则s1.ap1.m1和sq.ap1.m2目录在s1.ap1下，s1.ap1和s1.ap2目录在s1下。<br/>
 目录结构如下：
 ```text
-|s1-| 
+|s1-|
     |-s1.ap1|
             |-s1.ap1.m1
             |-s1.ap1.m2
@@ -255,7 +255,7 @@ sample/s1/s1.ap1/conf/application.conf
     1. local模式
     ```bash
     #!/bin/bash
-    
+
     DEPLOY_MODE=local
     LOCAL_ROOT_DIR=/Users/deanzhang/work/code/github/lego-framework/sample/s1
     SPARK_PARAMTERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
@@ -271,16 +271,16 @@ sample/s1/s1.ap1/conf/application.conf
     SPARK_PARAMTERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
     ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMTERS"
     ```
-    
+
     3. cluster模式
     ```bash
     #!/bin/bash
-    
+
     DEPLOY_MODE=cluster
     LOCAL_ROOT_DIR=/home/sa/app/models/appB
     SPARK_PARAMETERS="--conf spark.shuffle.consolidateFiles=true --executor-memory 1500m --conf spark.rdd.compress=true"
     HDFS_MODELS_ROOT_DIR=hdfs://hadoop1:8020/models/
-    ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMETERS" $HDFS_MODELS_ROOT_DIR 
+    ./submit_job.sh $DEPLOY_MODE $LOCAL_ROOT_DIR "$SPARK_PARAMETERS" $HDFS_MODELS_ROOT_DIR
     ```
 ## 预警
 目前只支持通过一种内部的http邮件API或http微信API发送预警信息，下一步框架会提供更灵活的配置，可以向自定义邮件或微信API发送预警信息。
@@ -293,23 +293,23 @@ sample/s1/s1.ap1/conf/application.conf
 ##### 内容
 ```text
 System[s1] start at 2017-10-16 16:46:15, finished at 2017-10-16 16:46:23, total elapsed time = 7586ms.
-s1.ap1.m1.a1: execute succeed. started at 2017-10-16 16:46:15; finished at 2017-10-16 16:46:16, elapsed time = 284ms. 
+s1.ap1.m1.a1: execute succeed. started at 2017-10-16 16:46:15; finished at 2017-10-16 16:46:16, elapsed time = 284ms.
 None
-s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 16:46:16; finished at 2017-10-16 16:46:17, elapsed time = 1013ms. 
+s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 16:46:16; finished at 2017-10-16 16:46:17, elapsed time = 1013ms.
 a#b#c
-s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 103ms. 
+s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 103ms.
 a#b#c
-s1.ap1.m1.a2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 155ms. 
+s1.ap1.m1.a2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 155ms.
 a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a3: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 159ms. 
+s1.ap1.m1.a3: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 159ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a4: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 138ms. 
+s1.ap1.m1.a4: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 138ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a4.1: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 166ms. 
+s1.ap1.m1.a4.1: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:17, elapsed time = 166ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a4.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:18, elapsed time = 136ms. 
+s1.ap1.m1.a4.2: execute succeed. started at 2017-10-16 16:46:17; finished at 2017-10-16 16:46:18, elapsed time = 136ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.1.a1: execute succeed. started at 2017-10-16 16:46:18; finished at 2017-10-16 16:46:18, elapsed time = 231ms. 
+s1.ap1.m1.1.a1: execute succeed. started at 2017-10-16 16:46:18; finished at 2017-10-16 16:46:18, elapsed time = 231ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
 ...
 ```
@@ -321,19 +321,19 @@ a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#
 ##### 内容
 ```text
 System[s1] start at 2017-10-16 17:00:18, finished at 2017-10-16 17:00:19, total elapsed time = 1763ms.
-s1.ap1.m1.a1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:18, elapsed time = 278ms. 
+s1.ap1.m1.a1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:18, elapsed time = 278ms.
 None
-s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:19, elapsed time = 879ms. 
+s1.ap1.m1.a1.1: execute succeed. started at 2017-10-16 17:00:18; finished at 2017-10-16 17:00:19, elapsed time = 879ms.
 a#b#c
-s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 68ms. 
+s1.ap1.m1.a1.2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 68ms.
 a#b#c
-s1.ap1.m1.a2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 156ms. 
+s1.ap1.m1.a2: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 156ms.
 a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a3: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 158ms. 
+s1.ap1.m1.a3: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 158ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a4: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 135ms. 
+s1.ap1.m1.a4: execute succeed. started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 135ms.
 a#b#c#a#b#c#a#b#c#a#b#c#a#b#c#a#b#c
-s1.ap1.m1.a4.1: execute failed!!!!! started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 4ms. 
+s1.ap1.m1.a4.1: execute failed!!!!! started at 2017-10-16 17:00:19; finished at 2017-10-16 17:00:19, elapsed time = 4ms.
 java.lang.Exception: Throw a test exception
 ```
 
