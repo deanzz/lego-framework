@@ -3,8 +3,10 @@ package cn.dean.lego.graph.module
 import akka.actor.ActorSystem
 import cn.dean.lego.common.config.ConfigLoader
 import cn.dean.lego.common.log.Logger
-import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
-import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, NotifyActor, PhysicalRunner}
+import cn.dean.lego.graph.logicplan.impl.TypesafeConfigLogicalParser
+import cn.dean.lego.graph.physicalplan.impl.AkkaPhysicalParser
+import cn.dean.lego.graph.physicalplan.NotifyActor
+import cn.dean.lego.graph.runner.impl.AkkaRunner
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import scaldi.Module
@@ -33,6 +35,6 @@ class GraphModule(configPath: String) extends Module {
 
   bind[AkkaPhysicalParser] to new AkkaPhysicalParser
 
-  bind[PhysicalRunner] to new PhysicalRunner
+  bind[AkkaRunner] to new AkkaRunner
 
 }

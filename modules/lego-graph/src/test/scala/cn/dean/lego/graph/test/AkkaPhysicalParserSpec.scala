@@ -1,9 +1,9 @@
 
 package cn.dean.lego.graph.test
 
-import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
+import cn.dean.lego.graph.logicplan.impl.TypesafeConfigLogicalParser
 import cn.dean.lego.graph.module.GraphModule
-import cn.dean.lego.graph.physicalplan.AkkaPhysicalParser
+import cn.dean.lego.graph.physicalplan.impl.AkkaPhysicalParser
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import scaldi.Injectable.inject

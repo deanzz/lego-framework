@@ -2,15 +2,16 @@ package cn.dean.lego.core
 
 import akka.actor.ActorSystem
 import cn.dean.lego.common.log.Logger
-import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
 import cn.dean.lego.graph.module.GraphModule
-import cn.dean.lego.graph.physicalplan.{AkkaPhysicalParser, PhysicalRunner}
 import com.typesafe.config.Config
 import scaldi.Injectable.inject
 import scaldi.akka.AkkaInjectable._
 import akka.pattern.ask
 import akka.util.Timeout
-import cn.dean.lego.graph.physicalplan.PhysicalRunner.Run
+import cn.dean.lego.graph.logicplan.impl.TypesafeConfigLogicalParser
+import cn.dean.lego.graph.physicalplan.impl.AkkaPhysicalParser
+import cn.dean.lego.graph.runner.Runner.Run
+import cn.dean.lego.graph.runner.impl.AkkaRunner
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -41,11 +42,10 @@ object Launcher {
       val logicalNodes = logicalParser.parse(inject[Config])
       val physicalParser = inject[AkkaPhysicalParser]
       val physicalGraph = physicalParser.parse(logicalNodes)
-      val physicalRunner = injectActorRef[PhysicalRunner]("physical-runner")
-      logger.info(s"Start up physicalRunnerActor [${physicalRunner.path}]")
+      val graphRunner = injectActorRef[AkkaRunner]("graph-runner")
+      logger.info(s"Start up graph-runner [${graphRunner.path}]")
       implicit val timeout: Timeout = Timeout(10.day)
-      val future = physicalRunner ? Run(physicalGraph)
-      //Await.result(future, 5.day)
+      val future = graphRunner ? Run(physicalGraph)
       Await.ready(future, 10.day)
     } catch {
       case e: Exception =>

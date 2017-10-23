@@ -1,7 +1,7 @@
 package cn.dean.lego.graph.test
 
 import cn.dean.lego.common.config.ConfigLoader
-import cn.dean.lego.graph.logicplan.TypesafeConfigLogicalParser
+import cn.dean.lego.graph.logicplan.impl.TypesafeConfigLogicalParser
 import cn.dean.lego.graph.module.GraphModule
 import com.typesafe.config.Config
 import org.scalatest.FlatSpec
