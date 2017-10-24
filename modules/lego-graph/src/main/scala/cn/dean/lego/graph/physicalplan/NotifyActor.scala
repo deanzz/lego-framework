@@ -88,7 +88,7 @@ class NotifyActor(implicit injector: Injector) extends Actor with AkkaInjectable
     case AddResultLog(log) =>
       assemblyResults += log
 
-    case unknown => logger.error(s"PhysicalRunner got unknown message [$unknown]")
+    case unknown => logger.error(s"NotifyActor got unknown message [$unknown]")
   }
 }
 
